@@ -103,6 +103,7 @@ public:
         BoundingBox BB = mesh.getBoundingBox();
         float zMovement = 0.5f * glm::max(BB.getSize().x, BB.getSize().y) / glm::tan(glm::radians(0.5f * camera->getFov()));
         camera->setPosition(glm::vec3(0.0f, 0.0f, 0.1f * BB.getSize().z + zMovement));
+        // camera->setPosition(glm::vec3(0.8f, 0.6f, 0.0f));
         camera->start();
         setMainCamera(camera);
         addSystem(camera);
@@ -128,6 +129,7 @@ public:
         mOctreeLightShader->setUseSoftShadows(mUseSoftShadows);
         mOctreeLightShader->setOverRelaxation(mOverRelaxation);
         mOctreeLightShader->setMaxShadowIterations(mMaxShadowIterations);
+        mOctreeLightShader->setUseIndirect(mUseIndirect);
 
         mModelRenderer->draw(getMainCamera());
 
@@ -162,6 +164,7 @@ public:
 		    ImGui::Separator();
 
             ImGui::Text("Lighting settings");
+            ImGui::Checkbox("Use Indirect", &mUseIndirect);
             ImGui::SliderInt("Lights", &mLightNumber, 1, 4);
 
             for (int i = 0; i < mLightNumber; ++i) { //DOES NOT WORK, PROBLEM WITH REFERENCES
@@ -220,6 +223,7 @@ private:
     std::unique_ptr<SdfOctreeLightShader> mOctreeLightShader;
 
     //Options
+    bool mUseIndirect = false;
     int mMaxShadowIterations = 512;
     bool mUseAO = true;
     bool mUseSoftShadows = true;
@@ -262,7 +266,7 @@ private:
     //Material
     float mMetallic = 0.0f;
     float mRoughness = 0.5f;
-    glm::vec3 mAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 mAlbedo = glm::vec3(0.18f, 0.18f, 0.18f);
     glm::vec3 mF0 = glm::vec3(0.07f, 0.07f, 0.07f);
 
     //GUI

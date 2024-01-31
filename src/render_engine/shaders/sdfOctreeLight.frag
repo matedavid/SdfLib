@@ -29,6 +29,7 @@ uniform float overRelaxation;
 uniform bool useAO;
 
 uniform bool useSoftShadows;
+uniform bool useIndirect;
 
 //Lighting
 uniform int lightNumber;
@@ -416,12 +417,12 @@ float softshadow( in vec3 ro, in vec3 rd, float mint, float maxt, float w )
 }
 
 
-vec3 mapColor(vec3 pos, vec3 cameraPos)
+vec3 mapColor(vec3 pos, vec3 N, vec3 V)
 {
     //Normal
-    vec3 N = normalize(gridNormal);
+    // vec3 N = normalize(gridNormal);
     //View vector
-    vec3 V = normalize(cameraPos - pos);
+    // vec3 V = normalize(cameraPos - pos);
 
     //Plane vs model
     vec3 aPos = pos + vec3(-0.5, -0.1, -0.5);
@@ -476,6 +477,7 @@ vec3 mapColor(vec3 pos, vec3 cameraPos)
     return color;
 }
 
+/*
 void main()
 {
     vec3 outColor = vec3(0.9);
@@ -484,4 +486,128 @@ void main()
     outColor = mapColor(hitPoint, cameraPos);
 
     fragColor = vec4(outColor, 1.0);
+}
+*/
+
+vec3 randomSpherePoint(vec3 rand)
+{
+    float ang1 = (rand.x + 1.0) * PI; // [-1..1) -> [0..2*PI)
+    float u = rand.y; // [-1..1), cos and acos(2v-1) cancel each other out, so we arrive at [-1..1)
+    float u2 = u * u;
+    float sqrt1MinusU2 = sqrt(1.0 - u2);
+    float x = sqrt1MinusU2 * cos(ang1);
+    float y = sqrt1MinusU2 * sin(ang1);
+    float z = u;
+    return vec3(x, y, z);
+}
+
+vec3 randomHemispherePoint(vec3 rand, vec3 n)
+{
+    vec3 v = randomSpherePoint(rand);
+    return v * sign(dot(v, n));
+}
+
+float random(vec2 st) 
+{
+    float val = fract(sin(dot(st, vec2(12.9898,78.233))) * 43758.5453123);
+    return -1 + val * (1+1); // Convert [0,1] to [-1,1]
+}
+
+#define MAX_ITERATIONS 100
+
+bool raycast(vec3 startPos, vec3 dir, out vec3 resultPos)
+{
+    resultPos = startPos;
+    float lastDistance = 1e8;
+    uint it = 0;
+    while (lastDistance > 1e-5 && it < MAX_ITERATIONS)
+    {
+        lastDistance = map(resultPos);
+
+        float dist = max(lastDistance, 0.0);
+        resultPos += dir * dist;
+        it += 1;
+    }
+    return lastDistance <= 1e-5;
+}
+
+vec3 getColor(vec3 pos, vec3 N, vec3 V)
+{
+    vec3 color = vec3(0.0);
+    for (int i = 0; i < lightNumber; ++i)
+    {
+        vec3 lightColor = lightIntensity[i] * lightColor[i];
+
+        float distToLight = length(lightPos[i] - gridPosition);
+        vec3 L = normalize(lightPos[i] - gridPosition);
+
+        float coneAngle = atan(lightRadius[i]/distToLight);
+        float solidAngle = PI * sin(coneAngle) * pow((lightRadius[i]/distToLight), 2.0);
+
+        float shadow = useSoftShadows ? softshadow(gridPosition + epsilon * N, L, 0.005, distToLight, solidAngle) : 1.0f;
+
+        vec3 Lo = shadow * lightColor * max(dot(N, L), 0.0);
+        color += Lo;
+    }
+
+    return color;
+}
+
+#define NUM_SAMPLES 10
+
+void main()
+{
+    vec3 N = normalize(gridNormal);
+    vec3 V = normalize(cameraPos - gridPosition);
+
+    // Direct lighting
+    vec3 directLight = getColor(gridPosition, N, V);
+
+    // Indirect lighting
+    vec3 indirectLight = vec3(0.0);
+    if (useIndirect) {
+        float PDF = 1.0 / (2.0 * PI);
+
+        for (int i = 0; i < NUM_SAMPLES; ++i)
+        {
+            float t = time * (i+1);
+
+            float x = random(gl_FragCoord.xy + t*1);
+            float y = random(gl_FragCoord.xy + t*2);
+            float z = random(gl_FragCoord.xy + t*3);
+
+            vec3 direction = randomHemispherePoint(vec3(x,y,z), N);
+            direction = normalize(direction);
+
+            vec3 hitPosition;
+            bool hit = raycast(gridPosition + epsilon * direction, direction, hitPosition);
+
+            if (hit) 
+            {
+                vec3 gradient = mapGradient(hitPosition);
+                vec3 NIndirect;
+                if (dot(direction, gradient) > 0.0) N = -gradient;
+                else NIndirect = gradient;
+
+                NIndirect = normalize(NIndirect);
+
+                vec3 VIndirect = -direction;
+
+                vec3 indirectColor = getColor(hitPosition, NIndirect, VIndirect) * max(dot(NIndirect, VIndirect), 0.0);
+                indirectLight += indirectColor;
+            }
+            else 
+            {
+                indirectLight += vec3(0.5);
+            }
+        }
+
+        indirectLight /= (float(NUM_SAMPLES) * PDF);
+    }
+
+    vec3 combinedColor = (directLight + indirectLight) * (matAlbedo / PI);
+    combinedColor = combinedColor / (combinedColor + vec3(1.0));
+    combinedColor = pow(combinedColor, vec3(1.0/2.2));
+
+    fragColor = vec4(combinedColor, 1.0);
 }
