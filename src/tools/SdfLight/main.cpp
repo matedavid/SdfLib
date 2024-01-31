@@ -149,7 +149,7 @@ public:
                 ImGui::EndMenu();
             }
 
-            ImGui::EndMenuBar();
+            ImGui::EndMainMenuBar();
         }
 
         mCamera->drawGuiWindow();

@@ -89,7 +89,7 @@ void NavigationCamera::drawGuiWindow()
             ImGui::MenuItem("Show camera settings", NULL, &mShowGUI);		
             ImGui::EndMenu();
         }
-        ImGui::EndMenuBar();
+        ImGui::EndMainMenuBar();
     }
 
     if(mShowGUI)

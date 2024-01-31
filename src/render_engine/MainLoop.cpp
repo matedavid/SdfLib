@@ -18,7 +18,7 @@ void MainLoop::drawGui()
 			ImGui::MenuItem("Show performance window", NULL, &mShowGUI);
 			ImGui::EndMenu();		
         }
-        ImGui::EndMenuBar();
+        ImGui::EndMainMenuBar();
     }
 
 	if (mShowGUI) {
