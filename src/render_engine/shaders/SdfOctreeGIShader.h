@@ -9,11 +9,11 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <algorithm>
 
-class SdfOctreeLightShader : public Shader<SdfOctreeLightShader>
+class SdfOctreeGIShader : public Shader<SdfOctreeGIShader>
 {
 public:
-    SdfOctreeLightShader(sdflib::IOctreeSdf& octreeSdf) : 
-        Shader(SHADER_PATH + "sdfOctreeLight.vert", "", SHADER_PATH + "sdfOctreeLight.frag", getFragmentShaderHeader(octreeSdf))
+    SdfOctreeGIShader(sdflib::IOctreeSdf& octreeSdf) : 
+        Shader(SHADER_PATH + "sdfOctreeGI.vert", "", SHADER_PATH + "sdfOctreeGI.frag", getFragmentShaderHeader(octreeSdf))
     {
         unsigned int mRenderProgramId = getProgramId();
 
@@ -41,6 +41,7 @@ public:
         mUseSoftShadowsLocation = glGetUniformLocation(mRenderProgramId, "useSoftShadows");
         mOverRelaxationLocation = glGetUniformLocation(mRenderProgramId, "overRelaxation");
         mMaxShadowIterationsLocation = glGetUniformLocation(mRenderProgramId, "maxShadowIterations");
+        mUseIndirectLocation = glGetUniformLocation(mRenderProgramId, "useIndirect");
 
         //Lighting
         mLightNumberLocation = glGetUniformLocation(mRenderProgramId, "lightNumber");
@@ -84,6 +85,13 @@ public:
         mMaxShadowIterations = maxShadowIterations;
     }
 
+    void setUseIndirect(bool useIndirect)
+    {
+        mUseIndirect = useIndirect;
+    }
+
+    
+
 
     //Material
     void setMaterial(glm::vec3 albedo, float roughness, float metallic, glm::vec3 F0)
@@ -120,13 +128,14 @@ public:
         glUniform1f(timeLocation, timer.getElapsedSeconds());
 
         //mEpsilon = 0.5f*(2.0f/mRenderTextureSize.x); //radius of a pixel in screen space
-        mEpsilon = 1e-4;
+        mEpsilon = 1e-1;
         glUniform1f(mEpsilonLocation, mEpsilon);
         //Options
         glUniform1i(mUseAOLocation, mUseAO);
         glUniform1i(mUseSoftShadowsLocation, mUseSoftShadows);
         glUniform1f(mOverRelaxationLocation, mOverRelaxation);
         glUniform1i(mMaxShadowIterationsLocation, mMaxShadowIterations);
+        glUniform1i(mUseIndirectLocation, mUseIndirect);
         //Lighting
         glUniform1i(mLightNumberLocation, mLightNumber);
         glUniform3fv(mLightPosLocation, 4, glm::value_ptr(mLightPosition[0]));
@@ -164,11 +173,13 @@ private:
 
     unsigned int mEpsilonLocation;
     float mEpsilon = 0.0001f;
+    bool mUseIndirect;
 
      //Options
     unsigned int mUseAOLocation;
     unsigned int mUseSoftShadowsLocation;
     unsigned int mOverRelaxationLocation;
+    unsigned int mUseIndirectLocation;
 
     unsigned int mMaxShadowIterationsLocation;
     int mMaxShadowIterations = 512;

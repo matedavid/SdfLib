@@ -166,6 +166,13 @@ if(SDFLIB_BUILD_APPS)
     target_include_directories(SdfLight PRIVATE src/)
     add_dependencies(SdfLight copyShaders)
 
+    add_executable(SdfGI src/tools/SdfGI/main.cpp
+                    ${RENDER_ENGINE_SOURCE_FILES} ${RENDER_ENGINE_HEADER_FILES}
+                    ${RENDER_ENGINE_SHADERS_SOURCE_FILES} ${RENDER_ENGINE_SHADERS_HEADER_FILES})
+    target_link_libraries(SdfGI PUBLIC ${PROJECT_NAME} glfw imgui imguizmo glad)
+    target_include_directories(SdfGI PRIVATE src/)
+    add_dependencies(SdfGI copyShaders)
+
     add_executable(SdfExporter src/tools/SdfExporter/main.cpp)
     target_link_libraries(SdfExporter PUBLIC ${PROJECT_NAME})
 

@@ -1,7 +1,7 @@
 #include "SdfLib/utils/Mesh.h"
 #include "SdfLib/utils/PrimitivesFactory.h"
 #include "SdfLib/utils/Timer.h"
-#include "render_engine/shaders/SdfOctreeLightShader.h"
+#include "render_engine/shaders/SdfOctreeGIShader.h"
 #include "render_engine/shaders/BasicShader.h"
 #include "render_engine/MainLoop.h"
 #include "render_engine/NavigationCamera.h"
@@ -44,7 +44,7 @@ public:
             exit(1);
         }
 
-        mOctreeLightShader = std::make_unique<SdfOctreeLightShader>(*octreeSdf);
+        mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf);
 
         // Model Render
         {
@@ -61,7 +61,7 @@ public:
 								}, mesh.getNormals().data(), mesh.getNormals().size());
 
 			mModelRenderer->setIndexData(mesh.getIndices());
-			mModelRenderer->setShader(mOctreeLightShader.get());
+			mModelRenderer->setShader(mOctreeGIShader.get());
             mModelRenderer->callDraw = false; // Disable the automatic call because we already call the function
             mModelRenderer->callDrawGui = false;
             mModelRenderer->systemName = "Mesh Model";
@@ -89,7 +89,7 @@ public:
 			mPlaneRenderer->setTransform(glm::translate(glm::mat4(1.0f), glm::vec3(mesh.getBoundingBox().getCenter().x, mesh.getBoundingBox().min.y, mesh.getBoundingBox().getCenter().z)) * 
                                          glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * 
                                         glm::scale(glm::mat4(1.0f), glm::vec3(64.0f)));
-            mPlaneRenderer->setShader(mOctreeLightShader.get());
+            mPlaneRenderer->setShader(mOctreeGIShader.get());
             mPlaneRenderer->callDraw = false; // Disable the automatic call because we already call the function
             mPlaneRenderer->callDrawGui = false;
             mPlaneRenderer->systemName = "Mesh Plane";
@@ -119,21 +119,22 @@ public:
     virtual void draw() override
     {
         //Model
-        mOctreeLightShader->setMaterial(mAlbedo, mRoughness, mMetallic, mF0);
-        mOctreeLightShader->setLightNumber(mLightNumber);
+        mOctreeGIShader->setMaterial(mAlbedo, mRoughness, mMetallic, mF0);
+        mOctreeGIShader->setLightNumber(mLightNumber);
         for (int i = 0; i < mLightNumber; i++)
         {
-            mOctreeLightShader->setLightInfo(i, mLightPosition[i], mLightColor[i], mLightIntensity[i], mLightRadius[i]);
+            mOctreeGIShader->setLightInfo(i, mLightPosition[i], mLightColor[i], mLightIntensity[i], mLightRadius[i]);
         }
-        mOctreeLightShader->setUseAO(mUseAO);
-        mOctreeLightShader->setUseSoftShadows(mUseSoftShadows);
-        mOctreeLightShader->setOverRelaxation(mOverRelaxation);
-        mOctreeLightShader->setMaxShadowIterations(mMaxShadowIterations);
+        mOctreeGIShader->setUseAO(mUseAO);
+        mOctreeGIShader->setUseSoftShadows(mUseSoftShadows);
+        mOctreeGIShader->setOverRelaxation(mOverRelaxation);
+        mOctreeGIShader->setMaxShadowIterations(mMaxShadowIterations);
+        mOctreeGIShader->setUseIndirect(mUseIndirect);
 
         mModelRenderer->draw(getMainCamera());
 
         //Plane
-        mOctreeLightShader->setMaterial(glm::vec3(0.7), 0.1, 0.1, glm::vec3(0.07));
+        mOctreeGIShader->setMaterial(glm::vec3(0.7), 0.1, 0.1, glm::vec3(0.07));
         mPlaneRenderer->draw(getMainCamera());
 
         drawGui();
@@ -163,6 +164,7 @@ public:
 		    ImGui::Separator();
 
             ImGui::Text("Lighting settings");
+            ImGui::Checkbox("Use Indirect", &mUseIndirect);
             ImGui::SliderInt("Lights", &mLightNumber, 1, 4);
 
             for (int i = 0; i < mLightNumber; ++i) { //DOES NOT WORK, PROBLEM WITH REFERENCES
@@ -218,9 +220,10 @@ private:
     std::shared_ptr<RenderMesh> mPlaneRenderer;
     std::shared_ptr<RenderMesh> mLightRenderer;
 
-    std::unique_ptr<SdfOctreeLightShader> mOctreeLightShader;
+    std::unique_ptr<SdfOctreeGIShader> mOctreeGIShader;
 
     //Options
+    bool mUseIndirect = false;
     int mMaxShadowIterations = 512;
     bool mUseAO = true;
     bool mUseSoftShadows = true;
@@ -263,7 +266,7 @@ private:
     //Material
     float mMetallic = 0.0f;
     float mRoughness = 0.5f;
-    glm::vec3 mAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 mAlbedo = glm::vec3(0.18f, 0.18f, 0.18f);
     glm::vec3 mF0 = glm::vec3(0.07f, 0.07f, 0.07f);
 
     //GUI
