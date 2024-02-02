@@ -36,12 +36,14 @@ public:
 
         mEpsilonLocation = glGetUniformLocation(mRenderProgramId, "epsilon");
 
-        //Options
-        mUseAOLocation = glGetUniformLocation(mRenderProgramId, "useAO");
-        mUseSoftShadowsLocation = glGetUniformLocation(mRenderProgramId, "useSoftShadows");
-        mOverRelaxationLocation = glGetUniformLocation(mRenderProgramId, "overRelaxation");
-        mMaxShadowIterationsLocation = glGetUniformLocation(mRenderProgramId, "maxShadowIterations");
+        //Global Illumination Settings
         mUseIndirectLocation = glGetUniformLocation(mRenderProgramId, "useIndirect");
+        mNumSamplesLocation = glGetUniformLocation(mRenderProgramId, "numSamples");
+        mMaxDepthLocation = glGetUniformLocation(mRenderProgramId, "maxDepth");
+
+        //Options
+        mUseSoftShadowsLocation = glGetUniformLocation(mRenderProgramId, "useSoftShadows");
+        mMaxShadowIterationsLocation = glGetUniformLocation(mRenderProgramId, "maxShadowIterations");
 
         //Lighting
         mLightNumberLocation = glGetUniformLocation(mRenderProgramId, "lightNumber");
@@ -64,34 +66,32 @@ public:
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
-    //Options
-    void setUseAO(bool useAO)
+    //Global Illumination Settings
+    void setUseIndirect(bool useIndirect)
     {
-        mUseAO = useAO;
+        mUseIndirect = useIndirect;
     }
 
+    void setNumSamples(int numSamples)
+    {
+        mNumSamples = numSamples;
+    }
+
+    void setMaxDepth(int maxDepth)
+    {
+        mMaxDepth = maxDepth;
+    }
+
+    //Options
     void setUseSoftShadows(bool useSoftShadows)
     {
         mUseSoftShadows = useSoftShadows;
-    }
-
-    void setOverRelaxation(float overRelaxation)
-    {
-        mOverRelaxation = overRelaxation;
     }
 
     void setMaxShadowIterations(int maxShadowIterations)
     {
         mMaxShadowIterations = maxShadowIterations;
     }
-
-    void setUseIndirect(bool useIndirect)
-    {
-        mUseIndirect = useIndirect;
-    }
-
-    
-
 
     //Material
     void setMaterial(glm::vec3 albedo, float roughness, float metallic, glm::vec3 F0)
@@ -115,8 +115,6 @@ public:
         mLightRadius[i] = lightRadius;
     }
 
-  
-
     void bind() override
     {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, mOctreeSSBO);
@@ -128,14 +126,18 @@ public:
         glUniform1f(timeLocation, timer.getElapsedSeconds());
 
         //mEpsilon = 0.5f*(2.0f/mRenderTextureSize.x); //radius of a pixel in screen space
-        mEpsilon = 1e-1;
+        mEpsilon = 1e-2;
         glUniform1f(mEpsilonLocation, mEpsilon);
-        //Options
-        glUniform1i(mUseAOLocation, mUseAO);
-        glUniform1i(mUseSoftShadowsLocation, mUseSoftShadows);
-        glUniform1f(mOverRelaxationLocation, mOverRelaxation);
-        glUniform1i(mMaxShadowIterationsLocation, mMaxShadowIterations);
+
+        //Global Illumination options
         glUniform1i(mUseIndirectLocation, mUseIndirect);
+        glUniform1i(mNumSamplesLocation, mNumSamples);
+        glUniform1i(mMaxDepthLocation, mMaxDepth);
+
+        //Options
+        glUniform1i(mUseSoftShadowsLocation, mUseSoftShadows);
+        glUniform1i(mMaxShadowIterationsLocation, mMaxShadowIterations);
+
         //Lighting
         glUniform1i(mLightNumberLocation, mLightNumber);
         glUniform3fv(mLightPosLocation, 4, glm::value_ptr(mLightPosition[0]));
@@ -173,21 +175,23 @@ private:
 
     unsigned int mEpsilonLocation;
     float mEpsilon = 0.0001f;
-    bool mUseIndirect;
 
-     //Options
-    unsigned int mUseAOLocation;
-    unsigned int mUseSoftShadowsLocation;
-    unsigned int mOverRelaxationLocation;
+    // Global Illumination Settings
     unsigned int mUseIndirectLocation;
+    bool mUseIndirect = false;
 
+    unsigned int mNumSamplesLocation;
+    int mNumSamples;
+
+    unsigned int mMaxDepthLocation;
+    int mMaxDepth;
+
+    //Options
     unsigned int mMaxShadowIterationsLocation;
     int mMaxShadowIterations = 512;
 
-
-    bool mUseAO = false;
+    unsigned int mUseSoftShadowsLocation;
     bool mUseSoftShadows = false;
-    float mOverRelaxation = 1.47f;
 
     //Lighting
     unsigned int mLightNumberLocation;

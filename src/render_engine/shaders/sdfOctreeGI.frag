@@ -21,15 +21,14 @@ uint roundFloat(float a)
 
 uniform float epsilon;
 
-//Options 
-uniform int maxIterations;
-uniform int maxShadowIterations;
-
-uniform float overRelaxation;
-uniform bool useAO;
-
-uniform bool useSoftShadows;
+// Global Illumination Options
 uniform bool useIndirect;
+uniform int numSamples;
+uniform int maxDepth;
+
+//Options 
+uniform int maxShadowIterations;
+uniform bool useSoftShadows;
 
 //Lighting
 uniform int lightNumber;
@@ -315,21 +314,6 @@ vec3 mapGradient(vec3 pos)
 }
 
 //LIGHTING
-float getAO(vec3 pos, vec3 n)
-{
-    float occ = 0.0;
-    float decay = 1.0;
-    for(int i=0; i < MAX_AO_ITERATIONS; i++)
-    {
-        float h = 0.002 + 0.1 * float(i)/8.0;
-        float d = map(pos + n * h);
-        occ += max(h-d, 0.0);
-        decay *= 0.8;
-    }
-
-    return min(1.0 - 1.5 * occ, 1.0);
-}
-
 float softshadow(vec3 ro, vec3 rd)
 {
     float res = 1.0;
@@ -468,7 +452,7 @@ vec3 mapColor(vec3 pos, vec3 N, vec3 V)
         Lo += (kD * matAlbedo / PI + specular) * radiance * NdotL;
     }
 
-    vec3 ambient = useAO ? vec3(0.5) * matAlbedo * getAO(pos, N) : vec3(0.5) * matAlbedo; // Ambient light estimation
+    vec3 ambient = vec3(0.5) * matAlbedo; // Ambient light estimation
     vec3 color = ambient + Lo;
 
     color = color / (color + vec3(1.0));
@@ -553,8 +537,6 @@ vec3 getColor(vec3 pos, vec3 N, vec3 V)
     return color;
 }
 
-#define NUM_SAMPLES 10
-
 void main()
 {
     vec3 N = normalize(gridNormal);
@@ -568,7 +550,7 @@ void main()
     if (useIndirect) {
         float PDF = 1.0 / (2.0 * PI);
 
-        for (int i = 0; i < NUM_SAMPLES; ++i)
+        for (int i = 0; i < numSamples; ++i)
         {
             float t = time * (i+1);
 
@@ -598,11 +580,11 @@ void main()
             }
             else 
             {
-                indirectLight += vec3(0.5);
+                indirectLight += vec3(0.5) * max(dot(N,direction), 0.0);
             }
         }
 
-        indirectLight /= (float(NUM_SAMPLES) * PDF);
+        indirectLight /= (float(numSamples) * PDF);
     }
 
     vec3 combinedColor = (directLight + indirectLight) * (matAlbedo / PI);

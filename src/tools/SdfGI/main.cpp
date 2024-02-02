@@ -125,11 +125,12 @@ public:
         {
             mOctreeGIShader->setLightInfo(i, mLightPosition[i], mLightColor[i], mLightIntensity[i], mLightRadius[i]);
         }
-        mOctreeGIShader->setUseAO(mUseAO);
         mOctreeGIShader->setUseSoftShadows(mUseSoftShadows);
-        mOctreeGIShader->setOverRelaxation(mOverRelaxation);
         mOctreeGIShader->setMaxShadowIterations(mMaxShadowIterations);
+
         mOctreeGIShader->setUseIndirect(mUseIndirect);
+        mOctreeGIShader->setNumSamples(mNumSamples);
+        mOctreeGIShader->setMaxDepth(mMaxDepth);
 
         mModelRenderer->draw(getMainCamera());
 
@@ -163,8 +164,12 @@ public:
             ImGui::Spacing();
 		    ImGui::Separator();
 
-            ImGui::Text("Lighting settings");
+            ImGui::Text("Global Illumination Settings");
             ImGui::Checkbox("Use Indirect", &mUseIndirect);
+            ImGui::InputInt("Num Samples", &mNumSamples);
+            ImGui::InputInt("Max Depth", &mMaxDepth);
+
+            ImGui::Text("Lighting settings");
             ImGui::SliderInt("Lights", &mLightNumber, 1, 4);
 
             for (int i = 0; i < mLightNumber; ++i) { //DOES NOT WORK, PROBLEM WITH REFERENCES
@@ -195,8 +200,6 @@ public:
 
             ImGui::Text("Algorithm Settings");
             ImGui::InputInt("Max Shadow Iterations", &mMaxShadowIterations);
-            ImGui::SliderFloat("Over Relaxation", &mOverRelaxation, 1.0f, 2.0f);
-            ImGui::Checkbox("AO", &mUseAO);
             ImGui::Checkbox("Soft Shadows", &mUseSoftShadows);
 
             // Print model GUI
@@ -223,11 +226,12 @@ private:
     std::unique_ptr<SdfOctreeGIShader> mOctreeGIShader;
 
     //Options
-    bool mUseIndirect = false;
     int mMaxShadowIterations = 512;
-    bool mUseAO = true;
     bool mUseSoftShadows = true;
-    float mOverRelaxation = 1.47f;
+
+    bool mUseIndirect = false;
+    int mNumSamples = 10;
+    int mMaxDepth = 1;
 
     //Lighting
     int mLightNumber = 1;
