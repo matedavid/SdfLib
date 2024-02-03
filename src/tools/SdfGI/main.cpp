@@ -93,6 +93,7 @@ public:
             mPlaneRenderer->callDraw = false; // Disable the automatic call because we already call the function
             mPlaneRenderer->callDrawGui = false;
             mPlaneRenderer->systemName = "Mesh Plane";
+            mPlaneRenderer->drawSurface(false);
             addSystem(mPlaneRenderer);
         }
 
@@ -102,8 +103,8 @@ public:
         // Move camera in the z-axis to be able to see the whole model
         BoundingBox BB = mesh.getBoundingBox();
         float zMovement = 0.5f * glm::max(BB.getSize().x, BB.getSize().y) / glm::tan(glm::radians(0.5f * camera->getFov()));
-        camera->setPosition(glm::vec3(0.0f, 0.0f, 0.1f * BB.getSize().z + zMovement));
-        // camera->setPosition(glm::vec3(0.8f, 0.6f, 0.0f));
+        // camera->setPosition(glm::vec3(0.0f, 0.0f, 0.1f * BB.getSize().z + zMovement));
+        camera->setPosition(glm::vec3(0.8f, 0.6f, 0.0f));
         camera->start();
         setMainCamera(camera);
         addSystem(camera);
@@ -229,6 +230,7 @@ private:
     int mMaxShadowIterations = 512;
     bool mUseSoftShadows = true;
 
+    //Global Illumination Settings
     bool mUseIndirect = false;
     int mNumSamples = 10;
     int mMaxDepth = 1;
@@ -270,7 +272,7 @@ private:
     //Material
     float mMetallic = 0.0f;
     float mRoughness = 0.5f;
-    glm::vec3 mAlbedo = glm::vec3(0.18f, 0.18f, 0.18f);
+    glm::vec3 mAlbedo = glm::vec3(0.3f, 0.3f, 0.3f);
     glm::vec3 mF0 = glm::vec3(0.07f, 0.07f, 0.07f);
 
     //GUI

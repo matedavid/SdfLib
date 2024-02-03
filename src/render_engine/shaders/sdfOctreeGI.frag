@@ -47,6 +47,9 @@ uniform float minBorderValue;
 uniform float distanceScale;
 uniform float time;
 
+uniform mat4 worldToStartGridMatrix;
+uniform mat4 modelMatrix;
+
 in vec3 gridPosition;
 in vec3 gridNormal;
 in vec3 cameraPos;
@@ -400,7 +403,7 @@ float softshadow( in vec3 ro, in vec3 rd, float mint, float maxt, float w )
     return 0.25*(1.0+res)*(1.0+res)*(2.0-res);
 }
 
-
+/*
 vec3 mapColor(vec3 pos, vec3 N, vec3 V)
 {
     //Normal
@@ -461,7 +464,6 @@ vec3 mapColor(vec3 pos, vec3 N, vec3 V)
     return color;
 }
 
-/*
 void main()
 {
     vec3 outColor = vec3(0.9);
@@ -473,31 +475,40 @@ void main()
 }
 */
 
-vec3 randomSpherePoint(vec3 rand)
+uint pcg_hash(uint seed)
 {
-    float ang1 = (rand.x + 1.0) * PI; // [-1..1) -> [0..2*PI)
-    float u = rand.y; // [-1..1), cos and acos(2v-1) cancel each other out, so we arrive at [-1..1)
-    float u2 = u * u;
-    float sqrt1MinusU2 = sqrt(1.0 - u2);
-    float x = sqrt1MinusU2 * cos(ang1);
-    float y = sqrt1MinusU2 * sin(ang1);
-    float z = u;
-    return vec3(x, y, z);
+    uint state = seed * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
 }
 
-vec3 randomHemispherePoint(vec3 rand, vec3 n)
+float randomFloat(uint seed, out uint newSeed)
 {
-    vec3 v = randomSpherePoint(rand);
-    return v * sign(dot(v, n));
+    newSeed = pcg_hash(seed);
+    float val = float(newSeed) / float(4294967295u); // divide by max uint32 number
+    return val;
 }
 
-float random(vec2 st) 
+vec3 randomCosineDirection(float r1, float r2)
 {
-    float val = fract(sin(dot(st, vec2(12.9898,78.233))) * 43758.5453123);
-    return -1 + val * (1+1); // Convert [0,1] to [-1,1]
+    float phi = 2.0 * PI * r1;
+    float x = cos(phi) * sqrt(r2);
+    float y = sin(phi) * sqrt(r2);
+    float z = sqrt(1.0-r2);
+
+    return vec3(x,y,z);
 }
 
-#define MAX_ITERATIONS 100
+vec3 orientToNormal(vec3 direction, vec3 normal)
+{
+    vec3 a = (abs(normal.x) > 0.9) ? vec3(0,1,0) : vec3(1,0,0);
+    vec3 v = normalize(cross(normal, a));
+    vec3 u = cross(normal, v);
+
+    return direction.x * u + direction.y + v + direction.z * normal;
+}
+
+#define MAX_ITERATIONS 200
 
 bool raycast(vec3 startPos, vec3 dir, out vec3 resultPos)
 {
@@ -548,18 +559,20 @@ void main()
     // Indirect lighting
     vec3 indirectLight = vec3(0.0);
     if (useIndirect) {
-        float PDF = 1.0 / (2.0 * PI);
+        uint seed = uint(gl_FragCoord.x) * uint(gl_FragCoord.y) + uint(time);
 
         for (int i = 0; i < numSamples; ++i)
         {
-            float t = time * (i+1);
+            seed += uint(i);
 
-            float x = random(gl_FragCoord.xy + t*1);
-            float y = random(gl_FragCoord.xy + t*2);
-            float z = random(gl_FragCoord.xy + t*3);
+            float r1 = randomFloat(seed, seed);
+            float r2 = randomFloat(seed, seed);
 
-            vec3 direction = randomHemispherePoint(vec3(x,y,z), N);
+            vec3 direction = randomCosineDirection(r1, r2);
+            direction = orientToNormal(direction, N);
             direction = normalize(direction);
+
+            float pdf = dot(N, direction) / PI;
 
             vec3 hitPosition;
             bool hit = raycast(gridPosition + epsilon * direction, direction, hitPosition);
@@ -568,23 +581,23 @@ void main()
             {
                 vec3 gradient = mapGradient(hitPosition);
                 vec3 NIndirect;
-                if (dot(direction, gradient) > 0.0) N = -gradient;
+                if (dot(direction, gradient) > 0.0) NIndirect = -gradient;
                 else NIndirect = gradient;
 
                 NIndirect = normalize(NIndirect);
 
                 vec3 VIndirect = -direction;
 
-                vec3 indirectColor = getColor(hitPosition, NIndirect, VIndirect) * max(dot(NIndirect, VIndirect), 0.0);
-                indirectLight += indirectColor;
+                vec3 indirectColor = getColor(hitPosition, NIndirect, VIndirect) * max(dot(N, direction), 0.0);
+                indirectLight += indirectColor / pdf;
             }
             else 
             {
-                indirectLight += vec3(0.5) * max(dot(N,direction), 0.0);
+                indirectLight += vec3(0.5) * max(dot(N, direction), 0.0) / pdf;
             }
         }
 
-        indirectLight /= (float(numSamples) * PDF);
+        indirectLight /= float(numSamples);
     }
 
     vec3 combinedColor = (directLight + indirectLight) * (matAlbedo / PI);

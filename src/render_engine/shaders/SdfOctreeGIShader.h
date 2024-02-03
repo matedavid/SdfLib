@@ -126,7 +126,7 @@ public:
         glUniform1f(timeLocation, timer.getElapsedSeconds());
 
         //mEpsilon = 0.5f*(2.0f/mRenderTextureSize.x); //radius of a pixel in screen space
-        mEpsilon = 1e-2;
+        mEpsilon = 1e-3;
         glUniform1f(mEpsilonLocation, mEpsilon);
 
         //Global Illumination options
