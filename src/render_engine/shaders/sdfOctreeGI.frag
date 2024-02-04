@@ -489,23 +489,27 @@ float randomFloat(uint seed, out uint newSeed)
     return val;
 }
 
-vec3 randomCosineDirection(float r1, float r2)
-{
-    float phi = 2.0 * PI * r1;
-    float x = cos(phi) * sqrt(r2);
-    float y = sin(phi) * sqrt(r2);
-    float z = sqrt(1.0-r2);
-
-    return vec3(x,y,z);
-}
-
-vec3 orientToNormal(vec3 direction, vec3 normal)
-{
-    vec3 a = (abs(normal.x) > 0.9) ? vec3(0,1,0) : vec3(1,0,0);
-    vec3 v = normalize(cross(normal, a));
-    vec3 u = cross(normal, v);
-
-    return direction.x * u + direction.y + v + direction.z * normal;
+vec3 randomCosineWeightedHemispherePoint(vec3 rand, vec3 n) {
+    float r = rand.x * 0.5 + 0.5; // [-1..1) -> [0..1)
+    float angle = (rand.y + 1.0) * PI; // [-1..1] -> [0..2*PI)
+    float sr = sqrt(r);
+    vec2 p = vec2(sr * cos(angle), sr * sin(angle));
+    /*
+     * Unproject disk point up onto hemisphere:
+     * 1.0 == sqrt(x*x + y*y + z*z) -> z = sqrt(1.0 - x*x - y*y)
+     */
+    vec3 ph = vec3(p.xy, sqrt(1.0 - p*p));
+    /*
+     * Compute some arbitrary tangent space for orienting
+     * our hemisphere 'ph' around the normal. We use the camera's up vector
+     * to have some fix reference vector over the whole screen.
+     */
+    vec3 tangent = normalize(rand);
+    vec3 bitangent = cross(tangent, n);
+    tangent = cross(bitangent, n);
+  
+    /* Make our hemisphere orient around the normal. */
+    return tangent * ph.x + bitangent * ph.y + n * ph.z;
 }
 
 #define MAX_ITERATIONS 200
@@ -565,17 +569,17 @@ void main()
         {
             seed += uint(i);
 
-            float r1 = randomFloat(seed, seed);
-            float r2 = randomFloat(seed, seed);
+            // Convert random number from range [0,1] to [-1,1]
+            float r1 = 2 * randomFloat(seed, seed) - 1;
+            float r2 = 2 * randomFloat(seed, seed) - 1;
+            float r3 = 2 * randomFloat(seed, seed) - 1;
 
-            vec3 direction = randomCosineDirection(r1, r2);
-            direction = orientToNormal(direction, N);
-            direction = normalize(direction);
+            vec3 direction = randomCosineWeightedHemispherePoint(vec3(r1, r2, r3), N);
 
             float pdf = dot(N, direction) / PI;
 
             vec3 hitPosition;
-            bool hit = raycast(gridPosition + epsilon * direction, direction, hitPosition);
+            bool hit = raycast(gridPosition + epsilon * N, direction, hitPosition);
 
             if (hit) 
             {

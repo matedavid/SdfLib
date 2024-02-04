@@ -139,6 +139,12 @@ public:
 
     void update(float deltaTime) override
 	{
+        auto& wnd = Window::getCurrentWindow();
+        const bool shouldStopIndirect = wnd.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
+
+        if (shouldStopIndirect)
+            mUseIndirect = false;
+
         Scene::update(deltaTime);
     }
 
