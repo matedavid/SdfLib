@@ -97,6 +97,31 @@ public:
             addSystem(mPlaneRenderer);
         }
 
+        // Light Renderer
+        {
+            mLightRenderer = std::make_shared<RenderMesh>();
+            mLightRenderer->start();
+
+            std::shared_ptr<Mesh> cube = PrimitivesFactory::getCube();
+            cube->computeNormals();
+
+			mLightRenderer->setVertexData(std::vector<RenderMesh::VertexParameterLayout> {
+										RenderMesh::VertexParameterLayout(GL_FLOAT, 3)
+								}, cube->getVertices().data(), cube->getVertices().size());
+
+            mLightRenderer->setVertexData(std::vector<RenderMesh::VertexParameterLayout> {
+										RenderMesh::VertexParameterLayout(GL_FLOAT, 3)
+								}, cube->getNormals().data(), cube->getNormals().size());
+
+			mLightRenderer->setIndexData(cube->getIndices());
+
+            mLightRenderer->setShader(mOctreeGIShader.get());
+            mLightRenderer->callDraw = false; // Disable the automatic call because we already call the function
+            mLightRenderer->callDrawGui = false;
+            mLightRenderer->systemName = "Light Plane";
+            addSystem(mLightRenderer);
+        }
+
         // Create camera
         auto camera = std::make_shared<NavigationCamera>();
         camera->callDrawGui = false;
@@ -119,13 +144,25 @@ public:
 
     virtual void draw() override
     {
-        //Model
-        mOctreeGIShader->setMaterial(mAlbedo, mRoughness, mMetallic, mF0);
-        mOctreeGIShader->setLightNumber(mLightNumber);
+        //Lights
         for (int i = 0; i < mLightNumber; i++)
         {
             mOctreeGIShader->setLightInfo(i, mLightPosition[i], mLightColor[i], mLightIntensity[i], mLightRadius[i]);
+
+            auto transform = glm::mat4(1.0f);
+            transform = glm::translate(transform, mLightPosition[i]);
+            transform = glm::scale(transform, glm::vec3(0.10f));
+
+            mLightRenderer->setTransform(transform);
+            mOctreeGIShader->setMaterial(mLightColor[i], 0.1, 0.1, glm::vec3(0.04));
+
+            mLightRenderer->draw(getMainCamera());
         }
+
+        //Model
+        mOctreeGIShader->setMaterial(mAlbedo, mRoughness, mMetallic, mF0);
+        mOctreeGIShader->setLightNumber(mLightNumber);
+
         mOctreeGIShader->setUseSoftShadows(mUseSoftShadows);
         mOctreeGIShader->setMaxShadowIterations(mMaxShadowIterations);
 
