@@ -25,6 +25,7 @@ uniform float epsilon;
 uniform bool useIndirect;
 uniform int numSamples;
 uniform int maxDepth;
+uniform int maxRaycastIterations;
 
 //Options 
 uniform int maxShadowIterations;
@@ -512,14 +513,12 @@ vec3 randomCosineWeightedHemispherePoint(vec3 rand, vec3 n) {
     return tangent * ph.x + bitangent * ph.y + n * ph.z;
 }
 
-#define MAX_ITERATIONS 200
-
 bool raycast(vec3 startPos, vec3 dir, out vec3 resultPos)
 {
     resultPos = startPos;
     float lastDistance = 1e8;
     uint it = 0;
-    while (lastDistance > 1e-5 && it < MAX_ITERATIONS)
+    while (lastDistance > 1e-5 && it < maxRaycastIterations)
     {
         lastDistance = map(resultPos);
 
@@ -535,17 +534,17 @@ vec3 getColor(vec3 pos, vec3 N, vec3 V)
     vec3 color = vec3(0.0);
     for (int i = 0; i < lightNumber; ++i)
     {
-        vec3 lightColor = lightIntensity[i] * lightColor[i];
+        vec3 colorLight = lightIntensity[i] * lightColor[i];
 
-        float distToLight = length(lightPos[i] - gridPosition);
-        vec3 L = normalize(lightPos[i] - gridPosition);
+        float distToLight = length(lightPos[i] - pos);
+        vec3 L = normalize(lightPos[i] - pos);
 
         float coneAngle = atan(lightRadius[i]/distToLight);
         float solidAngle = PI * sin(coneAngle) * pow((lightRadius[i]/distToLight), 2.0);
 
-        float shadow = useSoftShadows ? softshadow(gridPosition + epsilon * N, L, 0.005, distToLight, solidAngle) : 1.0f;
+        float shadow = useSoftShadows ? softshadow(pos + epsilon * N, L, 0.005, distToLight, solidAngle) : 1.0f;
 
-        vec3 Lo = shadow * lightColor * max(dot(N, L), 0.0);
+        vec3 Lo = shadow * colorLight * max(dot(N, L), 0.0);
         color += Lo;
     }
 
@@ -597,7 +596,7 @@ void main()
             }
             else 
             {
-                indirectLight += vec3(0.5) * max(dot(N, direction), 0.0) / pdf;
+                // indirectLight += vec3(0.5) * max(dot(N, direction), 0.0) / pdf;
             }
         }
 

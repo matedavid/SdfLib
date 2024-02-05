@@ -175,6 +175,7 @@ public:
         mOctreeGIShader->setUseIndirect(mUseIndirect);
         mOctreeGIShader->setNumSamples(mNumSamples);
         mOctreeGIShader->setMaxDepth(mMaxDepth);
+        mOctreeGIShader->setMaxRaycastIterations(mMaxRaycastIterations);
 
         mModelRenderer->draw(getMainCamera());
 
@@ -212,6 +213,7 @@ public:
             ImGui::Checkbox("Use Indirect", &mUseIndirect);
             ImGui::InputInt("Num Samples", &mNumSamples);
             ImGui::InputInt("Max Depth", &mMaxDepth);
+            ImGui::InputInt("Max Raycast Iterations", &mMaxRaycastIterations);
 
             ImGui::Text("Lighting settings");
             ImGui::SliderInt("Lights", &mLightNumber, 1, 4);
@@ -277,6 +279,7 @@ private:
     bool mUseIndirect = false;
     int mNumSamples = 10;
     int mMaxDepth = 1;
+    int mMaxRaycastIterations = 100;
 
     //Lighting
     int mLightNumber = 1;

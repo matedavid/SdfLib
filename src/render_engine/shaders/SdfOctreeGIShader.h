@@ -40,6 +40,7 @@ public:
         mUseIndirectLocation = glGetUniformLocation(mRenderProgramId, "useIndirect");
         mNumSamplesLocation = glGetUniformLocation(mRenderProgramId, "numSamples");
         mMaxDepthLocation = glGetUniformLocation(mRenderProgramId, "maxDepth");
+        mMaxRaycastIterationsLocation = glGetUniformLocation(mRenderProgramId, "maxRaycastIterations");
 
         //Options
         mUseSoftShadowsLocation = glGetUniformLocation(mRenderProgramId, "useSoftShadows");
@@ -80,6 +81,11 @@ public:
     void setMaxDepth(int maxDepth)
     {
         mMaxDepth = maxDepth;
+    }
+
+    void setMaxRaycastIterations(int maxIterations)
+    {
+        mMaxRaycastIterations = maxIterations;
     }
 
     //Options
@@ -133,6 +139,7 @@ public:
         glUniform1i(mUseIndirectLocation, mUseIndirect);
         glUniform1i(mNumSamplesLocation, mNumSamples);
         glUniform1i(mMaxDepthLocation, mMaxDepth);
+        glUniform1i(mMaxRaycastIterationsLocation, mMaxRaycastIterations);
 
         //Options
         glUniform1i(mUseSoftShadowsLocation, mUseSoftShadows);
@@ -185,6 +192,9 @@ private:
 
     unsigned int mMaxDepthLocation;
     int mMaxDepth;
+
+    unsigned int mMaxRaycastIterationsLocation;
+    int mMaxRaycastIterations;
 
     //Options
     unsigned int mMaxShadowIterationsLocation;
