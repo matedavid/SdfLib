@@ -490,6 +490,11 @@ float randomFloat(uint seed, out uint newSeed)
     return val;
 }
 
+float randomFloatRange(float min, float max, uint seed, out uint outSeed)
+{
+    return min + randomFloat(seed, outSeed) * (max - min);
+}
+
 vec3 randomCosineWeightedHemispherePoint(vec3 rand, vec3 n) {
     float r = rand.x * 0.5 + 0.5; // [-1..1) -> [0..1)
     float angle = (rand.y + 1.0) * PI; // [-1..1] -> [0..2*PI)
@@ -551,19 +556,60 @@ vec3 getColor(vec3 pos, vec3 N, vec3 V)
     return color;
 }
 
+vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle) 
+{
+    // TODO: For the moment using only one light
+
+    uint seedLocal = seed;
+
+    float distToLight = distance(lightPos[0], pos);
+    vec3 colorLight = lightIntensity[0] * lightColor[0];
+
+    float cosAngle = lightRadius[0] / distToLight;
+    solidAngle = 2.0 * PI * (1.0 - cosAngle);
+
+    vec2 rangeX = vec2(lightPos[0].x - lightRadius[0], lightPos[0].x + lightRadius[0]);
+    vec2 rangeY = vec2(lightPos[0].y - lightRadius[0], lightPos[0].y + lightRadius[0]);
+    vec2 rangeZ = vec2(lightPos[0].z - lightRadius[0], lightPos[0].z + lightRadius[0]);
+    
+    // float pdf = solidAngle / (4.0 * PI * distToLight * distToLight);
+
+    vec3 color = vec3(0.0);
+    for (int i = 0; i < numSamples; ++i)
+    {
+        vec3 lightPoint = vec3(randomFloatRange(rangeX.x, rangeX.y, seedLocal, seedLocal), 
+                                randomFloatRange(rangeY.x, rangeY.y, seedLocal, seedLocal), 
+                                randomFloatRange(rangeZ.x, rangeZ.y, seedLocal, seedLocal));
+        vec3 lightDir = normalize(lightPoint - pos);
+
+        vec3 hitPosition;
+        bool hit = raycast(pos + epsilon * N, lightDir, hitPosition);
+
+        if (!hit)
+        {
+            color += colorLight * max(dot(N, lightDir), 0.0); // / pdf;
+        } 
+    }
+
+    return color / float(numSamples);
+}
+
 void main()
 {
+    uint seed = uint(gl_FragCoord.x) * uint(gl_FragCoord.y) + uint(time);
+
     vec3 N = normalize(gridNormal);
     vec3 V = normalize(cameraPos - gridPosition);
 
     // Direct lighting
-    vec3 directLight = getColor(gridPosition, N, V);
+    // vec3 directLight = getColor(gridPosition, N, V);
+    float solidAngle;
+    vec3 directLight = sphereSamplingDirectLight(gridPosition, N, seed, solidAngle);
 
     // Indirect lighting
     vec3 indirectLight = vec3(0.0);
-    if (useIndirect) {
-        uint seed = uint(gl_FragCoord.x) * uint(gl_FragCoord.y) + uint(time);
-
+    if (useIndirect) 
+    {
         for (int i = 0; i < numSamples; ++i)
         {
             seed += uint(i);
@@ -592,6 +638,8 @@ void main()
                 vec3 VIndirect = -direction;
 
                 vec3 indirectColor = getColor(hitPosition, NIndirect, VIndirect) * max(dot(N, direction), 0.0);
+                // Not using sphere sampling in indirect because too slow at the moment
+                // vec3 indirectColor = sphereSamplingDirectLight(hitPosition, NIndirect, seed, solidAngle) * max(dot(N, direction), 0.0);
                 indirectLight += indirectColor / pdf;
             }
             else 

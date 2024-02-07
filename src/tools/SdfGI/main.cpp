@@ -279,7 +279,7 @@ private:
     bool mUseIndirect = false;
     int mNumSamples = 10;
     int mMaxDepth = 1;
-    int mMaxRaycastIterations = 100;
+    int mMaxRaycastIterations = 50;
 
     //Lighting
     int mLightNumber = 1;
