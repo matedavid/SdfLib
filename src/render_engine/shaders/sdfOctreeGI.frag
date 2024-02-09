@@ -594,6 +594,91 @@ vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle
     return color / float(numSamples);
 }
 
+struct IndirectInfo
+{
+    vec3 pos;
+    vec3 N;
+    vec3 V;
+    int depth;
+
+    float dotAccumulator;
+    float pdfAccumulator;
+};
+
+vec3 indirectLightDepth(vec3 startPos, vec3 startN, vec3 startV, int depth, uint seed)
+{
+    IndirectInfo stack[100];
+
+    IndirectInfo startInfo;
+    startInfo.pos = startPos;
+    startInfo.N = startN;
+    startInfo.V = startV;
+    startInfo.depth = 0;
+    startInfo.dotAccumulator = 1.0;
+    startInfo.pdfAccumulator = 1.0;
+
+    stack[0] = startInfo;
+
+    vec3 finalColor = vec3(0.0);
+    float frac = 1.0 / float(numSamples);
+
+    int idx = 0;
+    while (idx >= 0)
+    {
+        IndirectInfo info = stack[idx--];
+
+        if (info.depth == depth)
+        {
+            vec3 color = pow(frac, depth) * getColor(info.pos, info.N, info.V) * info.dotAccumulator * (1.0 / info.pdfAccumulator);
+            finalColor += color;
+
+            continue;
+        }
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            seed += uint(i) + uint(info.depth);
+
+            // Convert random number from range [0,1] to [-1,1]
+            float r1 = 2 * randomFloat(seed, seed) - 1;
+            float r2 = 2 * randomFloat(seed, seed) - 1;
+            float r3 = 2 * randomFloat(seed, seed) - 1;
+
+            vec3 direction = randomCosineWeightedHemispherePoint(vec3(r1, r2, r3), info.N);
+
+            float scatteringPDF = max(dot(info.N, direction), 0.0) / PI;
+            float pdf = dot(info.N, direction) / PI;
+
+            vec3 hitPosition;
+            bool hit = raycast(info.pos + epsilon * info.N, direction, hitPosition);
+
+            if (hit) 
+            {
+                vec3 gradient = mapGradient(hitPosition);
+                vec3 NIndirect;
+                if (dot(direction, gradient) > 0.0) NIndirect = -gradient;
+                else NIndirect = gradient;
+
+                NIndirect = normalize(NIndirect);
+
+                vec3 VIndirect = -direction;
+
+                IndirectInfo newInfo;
+                newInfo.pos = hitPosition;
+                newInfo.N = NIndirect;
+                newInfo.V = VIndirect;
+                newInfo.depth = info.depth + 1;
+                newInfo.dotAccumulator = info.dotAccumulator * scatteringPDF;
+                newInfo.pdfAccumulator = info.pdfAccumulator * pdf;
+
+                stack[++idx] = newInfo;
+            }
+        }
+    }
+
+    return finalColor;
+}
+
 void main()
 {
     uint seed = uint(gl_FragCoord.x) * uint(gl_FragCoord.y) + uint(time);
@@ -602,14 +687,16 @@ void main()
     vec3 V = normalize(cameraPos - gridPosition);
 
     // Direct lighting
-    // vec3 directLight = getColor(gridPosition, N, V);
-    float solidAngle;
-    vec3 directLight = sphereSamplingDirectLight(gridPosition, N, seed, solidAngle);
+    vec3 directLight = getColor(gridPosition, N, V);
+    // float solidAngle;
+    // vec3 directLight = sphereSamplingDirectLight(gridPosition, N, seed, solidAngle);
 
     // Indirect lighting
     vec3 indirectLight = vec3(0.0);
     if (useIndirect) 
     {
+        indirectLight = indirectLightDepth(gridPosition, N, V, maxDepth, seed);
+        /*
         for (int i = 0; i < numSamples; ++i)
         {
             seed += uint(i);
@@ -649,6 +736,7 @@ void main()
         }
 
         indirectLight /= float(numSamples);
+        */
     }
 
     vec3 combinedColor = (directLight + indirectLight) * (matAlbedo / PI);
