@@ -603,11 +603,13 @@ struct IndirectInfo
 
     float dotAccumulator;
     float pdfAccumulator;
+    vec3 albedoAccumulator;
 };
 
 vec3 indirectLightDepth(vec3 startPos, vec3 startN, vec3 startV, int depth, uint seed)
 {
-    IndirectInfo stack[100];
+    #define STACK_SIZE 100
+    IndirectInfo stack[STACK_SIZE];
 
     IndirectInfo startInfo;
     startInfo.pos = startPos;
@@ -616,6 +618,7 @@ vec3 indirectLightDepth(vec3 startPos, vec3 startN, vec3 startV, int depth, uint
     startInfo.depth = 0;
     startInfo.dotAccumulator = 1.0;
     startInfo.pdfAccumulator = 1.0;
+    startInfo.albedoAccumulator = vec3(1.0);
 
     stack[0] = startInfo;
 
@@ -629,7 +632,7 @@ vec3 indirectLightDepth(vec3 startPos, vec3 startN, vec3 startV, int depth, uint
 
         if (info.depth == depth)
         {
-            vec3 color = pow(frac, depth) * getColor(info.pos, info.N, info.V) * info.dotAccumulator * (1.0 / info.pdfAccumulator);
+            vec3 color = pow(frac, depth) * getColor(info.pos, info.N, info.V) * info.dotAccumulator * (1.0 / info.pdfAccumulator) * info.albedoAccumulator;
             finalColor += color;
 
             continue;
@@ -639,15 +642,14 @@ vec3 indirectLightDepth(vec3 startPos, vec3 startN, vec3 startV, int depth, uint
         {
             seed += uint(i) + uint(info.depth);
 
-            // Convert random number from range [0,1] to [-1,1]
-            float r1 = 2 * randomFloat(seed, seed) - 1;
-            float r2 = 2 * randomFloat(seed, seed) - 1;
-            float r3 = 2 * randomFloat(seed, seed) - 1;
+            float r1 = randomFloatRange(-1.0, 1.0, seed, seed);
+            float r2 = randomFloatRange(-1.0, 1.0, seed, seed);
+            float r3 = randomFloatRange(-1.0, 1.0, seed, seed);
 
             vec3 direction = randomCosineWeightedHemispherePoint(vec3(r1, r2, r3), info.N);
 
-            float scatteringPDF = max(dot(info.N, direction), 0.0) / PI;
-            float pdf = dot(info.N, direction) / PI;
+            float scatteringPDF = max(dot(info.N, direction), 0.0);
+            float pdf = max(dot(info.N, direction), 0.0) / PI;
 
             vec3 hitPosition;
             bool hit = raycast(info.pos + epsilon * info.N, direction, hitPosition);
@@ -670,6 +672,7 @@ vec3 indirectLightDepth(vec3 startPos, vec3 startN, vec3 startV, int depth, uint
                 newInfo.depth = info.depth + 1;
                 newInfo.dotAccumulator = info.dotAccumulator * scatteringPDF;
                 newInfo.pdfAccumulator = info.pdfAccumulator * pdf;
+                newInfo.albedoAccumulator = info.albedoAccumulator * (matAlbedo / PI);
 
                 stack[++idx] = newInfo;
             }
@@ -687,7 +690,7 @@ void main()
     vec3 V = normalize(cameraPos - gridPosition);
 
     // Direct lighting
-    vec3 directLight = getColor(gridPosition, N, V);
+    vec3 directLight = getColor(gridPosition, N, V) * (matAlbedo / PI);
     // float solidAngle;
     // vec3 directLight = sphereSamplingDirectLight(gridPosition, N, seed, solidAngle);
 
@@ -696,6 +699,7 @@ void main()
     if (useIndirect) 
     {
         indirectLight = indirectLightDepth(gridPosition, N, V, maxDepth, seed);
+
         /*
         for (int i = 0; i < numSamples; ++i)
         {
@@ -739,7 +743,7 @@ void main()
         */
     }
 
-    vec3 combinedColor = (directLight + indirectLight) * (matAlbedo / PI);
+    vec3 combinedColor = directLight + indirectLight;
     combinedColor = combinedColor / (combinedColor + vec3(1.0));
     combinedColor = pow(combinedColor, vec3(1.0/2.2));
 
