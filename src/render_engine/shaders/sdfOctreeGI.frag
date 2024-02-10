@@ -594,6 +594,59 @@ vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle
     return color / float(numSamples);
 }
 
+#define indirectLightRec(name, name0)                                              \
+vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                          \
+{                                                                                  \
+    vec3 directLight = getColor(pos, N, V);                                        \
+    if (depth == 0) return directLight*(matAlbedo/PI);                             \
+                                                                                   \
+    vec3 indirectLight = vec3(0.0);                                                \
+    for (int i = 0; i < numSamples; ++i)                                           \
+    {                                                                              \
+        seed += uint(i) + uint(depth);                                             \
+                                                                                   \
+        float r1 = randomFloatRange(-1, 1, seed, seed);                            \
+        float r2 = randomFloatRange(-1, 1, seed, seed);                            \
+        float r3 = randomFloatRange(-1, 1, seed, seed);                            \
+                                                                                   \
+        vec3 direction = randomCosineWeightedHemispherePoint(vec3(r1, r2, r3), N); \
+                                                                                   \
+        float pdf = dot(N, direction) / PI;                                        \
+                                                                                   \
+        vec3 hitPosition;                                                          \
+        bool hit = raycast(pos + epsilon * N, direction, hitPosition);             \
+                                                                                   \
+        if (hit)                                                                   \
+        {                                                                          \
+            vec3 gradient = mapGradient(hitPosition);                              \
+            vec3 NIndirect;                                                        \
+            if (dot(direction, gradient) > 0.0) NIndirect = -gradient;             \
+            else NIndirect = gradient;                                             \
+                                                                                   \
+            NIndirect = normalize(NIndirect);                                      \
+                                                                                   \
+            vec3 VIndirect = -direction;                                           \
+                                                                                   \
+            vec3 indirectColor =                                                   \
+                name0(hitPosition, NIndirect, VIndirect, depth-1, seed)            \
+                * max(dot(N, direction), 0.0);                                     \
+            indirectLight += indirectColor / pdf;                                  \
+        }                                                                          \
+    }                                                                              \
+                                                                                   \
+    indirectLight = indirectLight / float(numSamples);                             \
+                                                                                   \
+    return (directLight + indirectLight) * (matAlbedo / PI);                       \
+}
+
+vec3 indirectLightDepth5(vec3 pos, vec3 N, vec3 V, int depth, uint seed) { return getColor(pos, N, V) * (matAlbedo/PI); }
+indirectLightRec(indirectLightDepth4, indirectLightDepth5);
+indirectLightRec(indirectLightDepth3, indirectLightDepth4);
+indirectLightRec(indirectLightDepth2, indirectLightDepth3);
+indirectLightRec(indirectLightDepth1, indirectLightDepth2);
+indirectLightRec(indirectLightDepth0, indirectLightDepth1);
+
+/*
 struct IndirectInfo
 {
     vec3 pos;
@@ -681,6 +734,7 @@ vec3 indirectLightDepth(vec3 startPos, vec3 startN, vec3 startV, int depth, uint
 
     return finalColor;
 }
+*/
 
 void main()
 {
@@ -689,63 +743,20 @@ void main()
     vec3 N = normalize(gridNormal);
     vec3 V = normalize(cameraPos - gridPosition);
 
-    // Direct lighting
-    vec3 directLight = getColor(gridPosition, N, V) * (matAlbedo / PI);
-    // float solidAngle;
-    // vec3 directLight = sphereSamplingDirectLight(gridPosition, N, seed, solidAngle);
-
-    // Indirect lighting
-    vec3 indirectLight = vec3(0.0);
-    if (useIndirect) 
+    vec3 color = vec3(0.0);
+    if (!useIndirect) 
     {
-        indirectLight = indirectLightDepth(gridPosition, N, V, maxDepth, seed);
-
-        /*
-        for (int i = 0; i < numSamples; ++i)
-        {
-            seed += uint(i);
-
-            // Convert random number from range [0,1] to [-1,1]
-            float r1 = 2 * randomFloat(seed, seed) - 1;
-            float r2 = 2 * randomFloat(seed, seed) - 1;
-            float r3 = 2 * randomFloat(seed, seed) - 1;
-
-            vec3 direction = randomCosineWeightedHemispherePoint(vec3(r1, r2, r3), N);
-
-            float pdf = dot(N, direction) / PI;
-
-            vec3 hitPosition;
-            bool hit = raycast(gridPosition + epsilon * N, direction, hitPosition);
-
-            if (hit) 
-            {
-                vec3 gradient = mapGradient(hitPosition);
-                vec3 NIndirect;
-                if (dot(direction, gradient) > 0.0) NIndirect = -gradient;
-                else NIndirect = gradient;
-
-                NIndirect = normalize(NIndirect);
-
-                vec3 VIndirect = -direction;
-
-                vec3 indirectColor = getColor(hitPosition, NIndirect, VIndirect) * max(dot(N, direction), 0.0);
-                // Not using sphere sampling in indirect because too slow at the moment
-                // vec3 indirectColor = sphereSamplingDirectLight(hitPosition, NIndirect, seed, solidAngle) * max(dot(N, direction), 0.0);
-                indirectLight += indirectColor / pdf;
-            }
-            else 
-            {
-                // indirectLight += vec3(0.5) * max(dot(N, direction), 0.0) / pdf;
-            }
-        }
-
-        indirectLight /= float(numSamples);
-        */
+        color = getColor(gridPosition, N, V) * (matAlbedo / PI);
+        // float solidAngle;
+        // vec3 directLight = sphereSamplingDirectLight(gridPosition, N, seed, solidAngle);
+    } 
+    else
+    {
+        color = indirectLightDepth0(gridPosition, N, V, maxDepth, seed);
     }
 
-    vec3 combinedColor = directLight + indirectLight;
-    combinedColor = combinedColor / (combinedColor + vec3(1.0));
-    combinedColor = pow(combinedColor, vec3(1.0/2.2));
+    color = color / (color + vec3(1.0));
+    color = pow(color, vec3(1.0/2.2));
 
-    fragColor = vec4(combinedColor, 1.0);
+    fragColor = vec4(color, 1.0);
 }
