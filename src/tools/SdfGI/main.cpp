@@ -11,6 +11,8 @@
 #include <args.hxx>
 #include <imgui.h>
 
+#include <filesystem>
+
 using namespace sdflib;
 
 class MyScene : public Scene
@@ -24,6 +26,7 @@ public:
 
 
         Mesh mesh(mModelPath);
+        mModelBBox = mesh.getBoundingBox();
         
         if(mNormalizeModel)
         {
@@ -215,6 +218,26 @@ public:
             ImGui::InputInt("Max Depth", &mMaxDepth);
             ImGui::InputInt("Max Raycast Iterations", &mMaxRaycastIterations);
 
+            if (ImGui::Button("Export scene"))
+            {
+                const auto modelPath = std::filesystem::current_path() / mModelPath;
+                std::cout << "Model Path: " << modelPath << "\n";
+
+                const auto bboxSize = mModelBBox.getSize();
+
+                const auto scale = 2.0f/glm::max(glm::max(bboxSize.x, bboxSize.y), bboxSize.z);
+                const auto translate = -mModelBBox.getCenter();
+
+                std::cout << "Model scale: " << scale << "\n";
+                std::cout << "Model translate: " << translate.x << " " << translate.y << " " << translate.z << "\n";
+
+                const auto cameraPos = mCamera->getPosition();
+                std::cout << "Camera position: " << cameraPos.x << " " << cameraPos.y << " " << cameraPos.z << "\n"; 
+
+                std::cout << "Light position: " << mLightPosition[0].x << " " << mLightPosition[0].y << " " << mLightPosition[0].z << "\n";
+                std::cout << "Light intensity: " << mLightIntensity[0] << "\n";
+            }
+
             ImGui::Text("Lighting settings");
             ImGui::SliderInt("Lights", &mLightNumber, 1, 4);
 
@@ -269,6 +292,8 @@ private:
     std::shared_ptr<RenderMesh> mPlaneRenderer;
     std::shared_ptr<RenderMesh> mLightRenderer;
 
+    BoundingBox mModelBBox;
+
     std::unique_ptr<SdfOctreeGIShader> mOctreeGIShader;
 
     //Options
@@ -277,7 +302,7 @@ private:
 
     //Global Illumination Settings
     bool mUseIndirect = false;
-    int mNumSamples = 10;
+    int mNumSamples = 2;
     int mMaxDepth = 1;
     int mMaxRaycastIterations = 50;
 
@@ -286,6 +311,7 @@ private:
     glm::vec3 mLightPosition[4] =
     {
         glm::vec3 (1.0f, 2.0f, 1.0f),
+        // glm::vec3 (0.0f, 0.2f, -1.5f),
         glm::vec3 (-1.0f, 2.0f, 1.0f),
         glm::vec3 (1.0f, 2.0f, -1.0f),
         glm::vec3 (-1.0f, 2.0f, -1.0f)
