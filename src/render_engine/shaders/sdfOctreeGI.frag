@@ -578,8 +578,8 @@ vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle
     for (int i = 0; i < numSamples; ++i)
     {
         vec3 lightPoint = vec3(randomFloatRange(rangeX.x, rangeX.y, seedLocal, seedLocal), 
-                                randomFloatRange(rangeY.x, rangeY.y, seedLocal, seedLocal), 
-                                randomFloatRange(rangeZ.x, rangeZ.y, seedLocal, seedLocal));
+                               randomFloatRange(rangeY.x, rangeY.y, seedLocal, seedLocal), 
+                               randomFloatRange(rangeZ.x, rangeZ.y, seedLocal, seedLocal));
         vec3 lightDir = normalize(lightPoint - pos);
 
         vec3 hitPosition;
@@ -610,8 +610,9 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         float r3 = randomFloatRange(-1, 1, seed, seed);                            \
                                                                                    \
         vec3 direction = randomCosineWeightedHemispherePoint(vec3(r1, r2, r3), N); \
+        direction = normalize(direction);                                          \
                                                                                    \
-        float pdf = dot(N, direction) / PI;                                        \
+        float pdf = max(dot(N, direction) / PI, 0.0);                              \
                                                                                    \
         vec3 hitPosition;                                                          \
         bool hit = raycast(pos + epsilon * N, direction, hitPosition);             \
@@ -634,7 +635,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         }                                                                          \
     }                                                                              \
                                                                                    \
-    indirectLight = indirectLight / float(numSamples);                             \
+    indirectLight /= float(numSamples);                                            \
                                                                                    \
     return (directLight + indirectLight) * (matAlbedo / PI);                       \
 }
@@ -748,7 +749,7 @@ void main()
     {
         color = getColor(gridPosition, N, V) * (matAlbedo / PI);
         // float solidAngle;
-        // vec3 directLight = sphereSamplingDirectLight(gridPosition, N, seed, solidAngle);
+        // color = sphereSamplingDirectLight(gridPosition, N, seed, solidAngle);
     } 
     else
     {

@@ -11,6 +11,8 @@
 #include <args.hxx>
 #include <imgui.h>
 
+#include "MitsubaExporter.h"
+
 #include <filesystem>
 
 using namespace sdflib;
@@ -220,22 +222,32 @@ public:
 
             if (ImGui::Button("Export scene"))
             {
-                const auto modelPath = std::filesystem::current_path() / mModelPath;
-                std::cout << "Model Path: " << modelPath << "\n";
+                MitsubaExporter exporter;
 
+                exporter.setCamera(*mCamera);
+
+                const auto modelPath = std::filesystem::current_path() / mModelPath;
                 const auto bboxSize = mModelBBox.getSize();
 
                 const auto scale = 2.0f/glm::max(glm::max(bboxSize.x, bboxSize.y), bboxSize.z);
                 const auto translate = -mModelBBox.getCenter();
 
-                std::cout << "Model scale: " << scale << "\n";
-                std::cout << "Model translate: " << translate.x << " " << translate.y << " " << translate.z << "\n";
+                exporter.addModel({
+                    .path = modelPath,
+                    .translate = translate,
+                    .scale = glm::vec3(scale),
+                });
 
-                const auto cameraPos = mCamera->getPosition();
-                std::cout << "Camera position: " << cameraPos.x << " " << cameraPos.y << " " << cameraPos.z << "\n"; 
+                for (std::size_t i = 0; i < mLightNumber; ++i)
+                {
+                    exporter.addEmitter({
+                        .pos = mLightPosition[i],
+                        .intensity = mLightIntensity[i],
+                        .radius = mLightRadius[i],
+                    });
+                }
 
-                std::cout << "Light position: " << mLightPosition[0].x << " " << mLightPosition[0].y << " " << mLightPosition[0].z << "\n";
-                std::cout << "Light intensity: " << mLightIntensity[0] << "\n";
+                exporter.save("mitsuba_scene.xml");
             }
 
             ImGui::Text("Lighting settings");
@@ -377,5 +389,5 @@ int main(int argc, char** argv)
 
     MyScene scene(args::get(modelPathArg), args::get(sdfPathArg), (normalizeBBArg) ? true : false);
     MainLoop loop;
-    loop.start(scene, "SdfLight");
+    loop.start(scene, "SdfGI");
 }
