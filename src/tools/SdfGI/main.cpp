@@ -317,12 +317,12 @@ public:
         window.swapBuffers();
         window.update();
 
-        // bool prevUseIndirect = mUseIndirect;
-        // mUseIndirect = true;
-        // uint32_t prevNumSamples = mNumSamples;
-        // mNumSamples = 5;
-        // uint32_t prevMaxDepth = mMaxDepth;
-        // mMaxDepth = 2;
+        bool prevUseIndirect = mUseIndirect;
+        mUseIndirect = true;
+        uint32_t prevNumSamples = mNumSamples;
+        mNumSamples = 7;
+        uint32_t prevMaxDepth = mMaxDepth;
+        mMaxDepth = 2;
 
         mDrawGui = false;
 
@@ -331,9 +331,9 @@ public:
 
         mDrawGui = true;
 
-        // mUseIndirect = prevUseIndirect;
-        // mNumSamples = prevNumSamples;
-        // mMaxDepth = prevMaxDepth;
+        mUseIndirect = prevUseIndirect;
+        mNumSamples = prevNumSamples;
+        mMaxDepth = prevMaxDepth;
 
         {
             unsigned char* pixels = new unsigned char[screenshotWidth * screenshotHeight * 3];
