@@ -40,6 +40,7 @@ public:
 	void enableMouse();
 	glm::vec2 getMousePosition();
 	glm::ivec2 getWindowSize() { return mWindowSize; }
+	void setWindowSize(glm::ivec2 size) const { glfwSetWindowSize(mGlfwWindow, size.x, size.y); }
 
 private:
     static Window* mCurrentWindow;

@@ -153,6 +153,7 @@ public:
         Scene::update(deltaTime);
     }
 
+    bool mDrawGui = true;
     virtual void draw() override
     {
         //Lights
@@ -188,7 +189,8 @@ public:
         mOctreeGIShader->setMaterial(glm::vec3(0.7), 0.1, 0.1, glm::vec3(0.07));
         mPlaneRenderer->draw(getMainCamera());
 
-        drawGui();
+        if (mDrawGui)
+            drawGui();
         Scene::draw();
     }
 
@@ -248,6 +250,8 @@ public:
                 }
 
                 exporter.save("mitsuba_scene.xml");
+                takeScreenshot();
+                std::cout << "Screenshot taken!\n";
             }
 
             ImGui::Text("Lighting settings");
@@ -293,6 +297,72 @@ public:
 
             ImGui::End();
         }
+    }
+
+    void takeScreenshot()
+    {
+        auto& window = Window::getCurrentWindow();
+
+        const auto& [width, height] = [&]() {
+            const auto size = window.getWindowSize();
+            return std::make_pair(size.x, size.y);
+        }();
+
+        const int screenshotWidth = 1920;
+        const int screenshotHeight = 1080;
+        window.setWindowSize(glm::ivec2(screenshotWidth, screenshotHeight));
+
+        resize(glm::ivec2(screenshotWidth, screenshotHeight));
+        glViewport(0, 0, screenshotWidth, screenshotHeight);
+        window.swapBuffers();
+        window.update();
+
+        // bool prevUseIndirect = mUseIndirect;
+        // mUseIndirect = true;
+        // uint32_t prevNumSamples = mNumSamples;
+        // mNumSamples = 5;
+        // uint32_t prevMaxDepth = mMaxDepth;
+        // mMaxDepth = 2;
+
+        mDrawGui = false;
+
+        draw();
+        glFinish();
+
+        mDrawGui = true;
+
+        // mUseIndirect = prevUseIndirect;
+        // mNumSamples = prevNumSamples;
+        // mMaxDepth = prevMaxDepth;
+
+        {
+            unsigned char* pixels = new unsigned char[screenshotWidth * screenshotHeight * 3];
+
+            glReadBuffer(GL_COLOR_ATTACHMENT0);
+            glReadPixels(0, 0, screenshotWidth, screenshotHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+
+            std::ofstream file("screenshot.ppm");
+
+            file << "P3\n" << screenshotWidth << " " << screenshotHeight << "\n255\n";
+
+            for (int row = screenshotHeight-1; row >= 0; --row)
+            {
+                for (int col = 0; col < screenshotWidth; ++col)
+                {
+                    const auto r = pixels[(row * screenshotWidth + col) * 3 + 0];
+                    const auto g = pixels[(row * screenshotWidth + col) * 3 + 1];
+                    const auto b = pixels[(row * screenshotWidth + col) * 3 + 2];
+
+                    file << static_cast<int>(r) << " " << static_cast<int>(g) << " " << static_cast<int>(b) << "\n";
+                }
+            }
+
+            file.close();
+        }
+
+        window.setWindowSize(glm::ivec2(width, height));
+        resize(glm::ivec2(width, height));
+        glViewport(0, 0, width, height);
     }
 
 private:
