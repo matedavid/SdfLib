@@ -2,6 +2,7 @@
 #include "SdfLib/utils/PrimitivesFactory.h"
 #include "SdfLib/utils/Timer.h"
 #include "render_engine/shaders/SdfOctreeGIShader.h"
+#include "render_engine/shaders/ScreenPlaneShader.h"
 #include "render_engine/shaders/BasicShader.h"
 #include "render_engine/MainLoop.h"
 #include "render_engine/NavigationCamera.h"
@@ -11,9 +12,12 @@
 #include <args.hxx>
 #include <imgui.h>
 
+#include <filesystem>
+
 #include "MitsubaExporter.h"
 
-#include <filesystem>
+#include "Texture.h"
+#include "Framebuffer.h"
 
 using namespace sdflib;
 
@@ -25,6 +29,50 @@ public:
     void start() override
     {
         Window::getCurrentWindow().setBackgroudColor(glm::vec4(0.9, 0.9, 0.9, 1.0));
+
+        auto windowWidth = (uint)Window::getCurrentWindow().getWindowSize().x;
+        auto windowHeight = (uint)Window::getCurrentWindow().getWindowSize().y;
+
+        // Depth only pass
+        {
+            mDepthTexture = std::make_shared<Texture>(Texture::Description{
+                .width = windowWidth,
+                .height = windowHeight,
+                .internalFormat = GL_DEPTH_COMPONENT,
+                .format = GL_DEPTH_COMPONENT,
+                .pixelDataType = GL_FLOAT,
+            });
+
+            mDepthFramebuffer = std::make_shared<Framebuffer>();
+            mDepthFramebuffer->bind();
+
+            mDepthFramebuffer->attach(*mDepthTexture, GL_DEPTH_ATTACHMENT);
+
+            mDepthFramebuffer->unbind();
+
+            assert(mDepthFramebuffer->bake());
+        }
+
+        // Color pass
+        {
+            mColorTexture = std::make_shared<Texture>(Texture::Description{
+                .width = windowWidth,
+                .height = windowHeight,
+                .internalFormat = GL_RGB32F,
+                .format = GL_RGB,
+                .pixelDataType = GL_FLOAT,
+            });
+
+            mColorFramebuffer = std::make_shared<Framebuffer>();
+            mColorFramebuffer->bind();
+
+            mColorFramebuffer->attach(*mColorTexture, GL_COLOR_ATTACHMENT0);
+            mColorFramebuffer->attach(*mDepthTexture, GL_DEPTH_ATTACHMENT);
+
+            mColorFramebuffer->unbind();
+
+            assert(mColorFramebuffer->bake());
+        }
 
         Mesh mesh(mModelPath);
         mModelBBox = mesh.getBoundingBox();
@@ -49,6 +97,7 @@ public:
         }
 
         mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf);
+        mPlaneShader = std::make_unique<ScreenPlaneShader>();
 
         // Model Render
         {
@@ -126,6 +175,22 @@ public:
             addSystem(mLightRenderer);
         }
 
+        // Full screen plane
+        {
+            std::shared_ptr<Mesh> planeMesh = PrimitivesFactory::getPlane();
+            planeMesh->applyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f)));
+
+            mScreenPlane = std::make_unique<RenderMesh>();
+            mScreenPlane->start();
+            mScreenPlane->setIndexData(planeMesh->getIndices());
+            mScreenPlane->setVertexData(std::vector<RenderMesh::VertexParameterLayout>{
+                                            RenderMesh::VertexParameterLayout(GL_FLOAT, 3)},
+                                        planeMesh->getVertices().data(), planeMesh->getVertices().size());
+
+            mPlaneShader->setInputTexture(mColorTexture->id());
+            mScreenPlane->setShader(mPlaneShader.get());
+        }
+
         // Create camera
         auto camera = std::make_shared<NavigationCamera>();
         camera->callDrawGui = false;
@@ -151,24 +216,8 @@ public:
         Scene::update(deltaTime);
     }
 
-    bool mDrawGui = true;
-    virtual void draw() override
+    void drawModel()
     {
-        // Lights
-        for (int i = 0; i < mLightNumber; i++)
-        {
-            mOctreeGIShader->setLightInfo(i, mLightPosition[i], mLightColor[i], mLightIntensity[i], mLightRadius[i]);
-
-            auto transform = glm::mat4(1.0f);
-            transform = glm::translate(transform, mLightPosition[i]);
-            transform = glm::scale(transform, glm::vec3(0.10f));
-
-            mLightRenderer->setTransform(transform);
-            mOctreeGIShader->setMaterial(mLightColor[i], 0.1, 0.1, glm::vec3(0.04));
-
-            mLightRenderer->draw(getMainCamera());
-        }
-
         // Model
         mOctreeGIShader->setMaterial(mAlbedo, mRoughness, mMetallic, mF0);
         mOctreeGIShader->setLightNumber(mLightNumber);
@@ -182,14 +231,72 @@ public:
         mOctreeGIShader->setMaxRaycastIterations(mMaxRaycastIterations);
 
         mModelRenderer->draw(getMainCamera());
+    }
 
-        // Plane
-        mOctreeGIShader->setMaterial(glm::vec3(0.7), 0.1, 0.1, glm::vec3(0.07));
-        mPlaneRenderer->draw(getMainCamera());
+    bool mDrawGui = true;
+    virtual void draw() override
+    {
 
-        if (mDrawGui)
-            drawGui();
-        Scene::draw();
+        // Depth only pass
+        {
+            glDepthMask(GL_TRUE);
+            mDepthFramebuffer->bind();
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            mOctreeGIShader->setSimple(true);
+
+            drawModel();
+
+            mDepthFramebuffer->unbind();
+
+            glDepthMask(GL_FALSE);
+        }
+
+        // Color pass
+        {
+            mColorFramebuffer->bind();
+
+            glClearColor(0.9, 0.9, 0.9, 1.0);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            glDepthFunc(GL_LEQUAL);
+
+            mOctreeGIShader->setSimple(false);
+
+            // Lights
+            for (int i = 0; i < mLightNumber; i++)
+            {
+                mOctreeGIShader->setLightInfo(i, mLightPosition[i], mLightColor[i], mLightIntensity[i], mLightRadius[i]);
+
+                auto transform = glm::mat4(1.0f);
+                transform = glm::translate(transform, mLightPosition[i]);
+                transform = glm::scale(transform, glm::vec3(0.10f));
+
+                mLightRenderer->setTransform(transform);
+                mOctreeGIShader->setMaterial(mLightColor[i], 0.1, 0.1, glm::vec3(0.04));
+
+                mLightRenderer->draw(getMainCamera());
+            }
+
+            drawModel();
+
+            // Plane
+            // mOctreeGIShader->setMaterial(glm::vec3(0.7), 0.1, 0.1, glm::vec3(0.07));
+            // mPlaneRenderer->draw(getMainCamera());
+
+            glDepthFunc(GL_LESS);
+            mColorFramebuffer->unbind();
+        }
+
+        // Final pass
+        {
+            mPlaneShader->bind();
+            mScreenPlane->draw(getMainCamera());
+
+            if (mDrawGui)
+                drawGui();
+            Scene::draw();
+        }
     }
 
     void drawGui()
@@ -375,9 +482,20 @@ private:
     std::shared_ptr<RenderMesh> mPlaneRenderer;
     std::shared_ptr<RenderMesh> mLightRenderer;
 
+    // Depth pass
+    std::shared_ptr<Texture> mDepthTexture;
+    std::shared_ptr<Framebuffer> mDepthFramebuffer;
+
+    // Color pass
+    std::shared_ptr<Texture> mColorTexture;
+    std::shared_ptr<Framebuffer> mColorFramebuffer;
+
+    std::unique_ptr<RenderMesh> mScreenPlane;
+
     BoundingBox mModelBBox;
 
     std::unique_ptr<SdfOctreeGIShader> mOctreeGIShader;
+    std::unique_ptr<ScreenPlaneShader> mPlaneShader;
 
     // Options
     int mMaxShadowIterations = 512;

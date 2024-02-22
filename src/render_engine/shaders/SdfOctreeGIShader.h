@@ -59,6 +59,8 @@ public:
         mAlbedoLocation = glGetUniformLocation(mRenderProgramId, "matAlbedo");
         mF0Location = glGetUniformLocation(mRenderProgramId, "matF0");
 
+        mSimpleLocation = glGetUniformLocation(mRenderProgramId, "simple");
+
         // Set octree data
         glGenBuffers(1, &mOctreeSSBO);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, mOctreeSSBO);
@@ -106,6 +108,11 @@ public:
         mRoughness = roughness;
         mMetallic = metallic;
         mF0 = F0;
+    }
+
+    void setSimple(bool simple)
+    {
+        mSimple = simple;
     }
 
     //Lighting
@@ -209,6 +216,9 @@ private:
     unsigned int mLightColorLocation;
     unsigned int mLightIntensityLocation;
     unsigned int mLightRadiusLocation;
+
+    unsigned int mSimpleLocation;
+    bool mSimple = false;
 
     int mLightNumber = 1;
     glm::vec3 mLightPosition[4] =

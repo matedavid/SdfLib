@@ -51,6 +51,8 @@ uniform float time;
 uniform mat4 worldToStartGridMatrix;
 uniform mat4 modelMatrix;
 
+uniform bool simple;
+
 in vec3 gridPosition;
 in vec3 gridNormal;
 in vec3 cameraPos;
@@ -739,6 +741,10 @@ vec3 indirectLightDepth(vec3 startPos, vec3 startN, vec3 startV, int depth, uint
 
 void main()
 {
+    if (simple) {
+        return;
+    }
+
     uint seed = uint(gl_FragCoord.x) * uint(gl_FragCoord.y) + uint(time);
 
     vec3 N = normalize(gridNormal);
@@ -756,8 +762,8 @@ void main()
         color = indirectLightDepth0(gridPosition, N, V, maxDepth, seed);
     }
 
-    color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0/2.2));
+    // color = color / (color + vec3(1.0));
+    // color = pow(color, vec3(1.0/2.2));
 
     fragColor = vec4(color, 1.0);
 }
