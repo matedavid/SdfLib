@@ -199,6 +199,8 @@ public:
         float zMovement = 0.5f * glm::max(BB.getSize().x, BB.getSize().y) / glm::tan(glm::radians(0.5f * camera->getFov()));
         // camera->setPosition(glm::vec3(0.0f, 0.0f, 0.1f * BB.getSize().z + zMovement));
         camera->setPosition(glm::vec3(0.8f, 0.6f, 0.0f));
+        camera->setOrientation(glm::quat(glm::vec3(glm::radians(-30.0f), glm::radians(90.0f), 0.0f)));
+
         camera->start();
         setMainCamera(camera);
         addSystem(camera);
