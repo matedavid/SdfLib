@@ -97,7 +97,7 @@ public:
         }
 
         mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf);
-        mPlaneShader = std::make_unique<ScreenPlaneShader>();
+        mScreenPlaneShader = std::make_unique<ScreenPlaneShader>();
 
         // Model Render
         {
@@ -187,8 +187,8 @@ public:
                                             RenderMesh::VertexParameterLayout(GL_FLOAT, 3)},
                                         planeMesh->getVertices().data(), planeMesh->getVertices().size());
 
-            mPlaneShader->setInputTexture(mColorTexture->id());
-            mScreenPlane->setShader(mPlaneShader.get());
+            mScreenPlaneShader->setInputTexture(mColorTexture->id());
+            mScreenPlane->setShader(mScreenPlaneShader.get());
         }
 
         // Create camera
@@ -290,7 +290,7 @@ public:
 
         // Final pass
         {
-            mPlaneShader->bind();
+            mScreenPlaneShader->bind();
             mScreenPlane->draw(getMainCamera());
 
             if (mDrawGui)
@@ -495,7 +495,7 @@ private:
     BoundingBox mModelBBox;
 
     std::unique_ptr<SdfOctreeGIShader> mOctreeGIShader;
-    std::unique_ptr<ScreenPlaneShader> mPlaneShader;
+    std::unique_ptr<ScreenPlaneShader> mScreenPlaneShader;
 
     // Options
     int mMaxShadowIterations = 512;
