@@ -2,7 +2,6 @@
 #include "SdfLib/utils/PrimitivesFactory.h"
 #include "SdfLib/utils/Timer.h"
 #include "render_engine/shaders/SdfOctreeGIShader.h"
-#include "render_engine/shaders/ScreenPlaneShader.h"
 #include "render_engine/shaders/BasicShader.h"
 #include "render_engine/MainLoop.h"
 #include "render_engine/NavigationCamera.h"
@@ -15,6 +14,10 @@
 #include <filesystem>
 
 #include "MitsubaExporter.h"
+
+#include "render_engine/shaders/GIAccumulationShader.h"
+#include "render_engine/shaders/GIScreenPresentShader.h"
+#include "render_engine/shaders/ScreenPlaneShader.h"
 
 #include "Texture.h"
 #include "Framebuffer.h"
@@ -74,6 +77,72 @@ public:
             assert(mColorFramebuffer->bake());
         }
 
+        // Accumulation
+        {
+            mAccumulationTexture = std::make_shared<Texture>(Texture::Description{
+                .width = windowWidth,
+                .height = windowHeight,
+                .internalFormat = GL_RGB32F,
+                .format = GL_RGB,
+                .pixelDataType = GL_FLOAT,
+            });
+
+            mResultTexture = std::make_shared<Texture>(Texture::Description{
+                .width = windowWidth,
+                .height = windowHeight,
+                .internalFormat = GL_RGB32F,
+                .format = GL_RGB,
+                .pixelDataType = GL_FLOAT,
+            });
+
+            mAccumulationFramebuffer = std::make_shared<Framebuffer>();
+            mAccumulationFramebuffer->bind();
+
+            mAccumulationFramebuffer->attach(*mResultTexture, GL_COLOR_ATTACHMENT0);
+
+            mAccumulationFramebuffer->unbind();
+
+            assert(mAccumulationFramebuffer->bake());
+
+            mGIAccumulationShader = std::make_shared<GIAccumulationShader>();
+            mGIAccumulationShader->setColorTexture(mColorTexture->id());
+            mGIAccumulationShader->setAccumulationTexture(mAccumulationTexture->id());
+        }
+
+        // Save accumulation
+        {
+            mAccumulationSaveFramebuffer = std::make_shared<Framebuffer>();
+            mAccumulationSaveFramebuffer->bind();
+
+            mAccumulationSaveFramebuffer->attach(*mAccumulationTexture, GL_COLOR_ATTACHMENT0);
+
+            mAccumulationSaveFramebuffer->unbind();
+
+            assert(mAccumulationSaveFramebuffer->bake());
+
+            mAccumulationSaveShader = std::make_unique<ScreenPlaneShader>();
+            mAccumulationSaveShader->setInputTexture(mResultTexture->id());
+        }
+
+        // Present
+        {
+            mScreenPresentShader = std::make_unique<GIScreenPresentShader>();
+            mScreenPresentShader->setInputTexture(mResultTexture->id());
+        }
+
+        // Full screen plane
+        {
+            std::shared_ptr<Mesh> planeMesh = PrimitivesFactory::getPlane();
+            planeMesh->applyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f)));
+
+            mScreenPlane = std::make_unique<RenderMesh>();
+            mScreenPlane->start();
+            mScreenPlane->setIndexData(planeMesh->getIndices());
+            mScreenPlane->setVertexData(std::vector<RenderMesh::VertexParameterLayout>{
+                                            RenderMesh::VertexParameterLayout(GL_FLOAT, 3)},
+                                        planeMesh->getVertices().data(), planeMesh->getVertices().size());
+        }
+
         Mesh mesh(mModelPath);
         mModelBBox = mesh.getBoundingBox();
 
@@ -97,7 +166,6 @@ public:
         }
 
         mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf);
-        mScreenPlaneShader = std::make_unique<ScreenPlaneShader>();
 
         // Model Render
         {
@@ -175,22 +243,6 @@ public:
             addSystem(mLightRenderer);
         }
 
-        // Full screen plane
-        {
-            std::shared_ptr<Mesh> planeMesh = PrimitivesFactory::getPlane();
-            planeMesh->applyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f)));
-
-            mScreenPlane = std::make_unique<RenderMesh>();
-            mScreenPlane->start();
-            mScreenPlane->setIndexData(planeMesh->getIndices());
-            mScreenPlane->setVertexData(std::vector<RenderMesh::VertexParameterLayout>{
-                                            RenderMesh::VertexParameterLayout(GL_FLOAT, 3)},
-                                        planeMesh->getVertices().data(), planeMesh->getVertices().size());
-
-            mScreenPlaneShader->setInputTexture(mColorTexture->id());
-            mScreenPlane->setShader(mScreenPlaneShader.get());
-        }
-
         // Create camera
         auto camera = std::make_shared<NavigationCamera>();
         camera->callDrawGui = false;
@@ -215,6 +267,11 @@ public:
         if (shouldStopIndirect)
             mUseIndirect = false;
 
+        if (mUseIndirect)
+            mAccumulationFrame++;
+        else
+            mAccumulationFrame = 1;
+
         Scene::update(deltaTime);
     }
 
@@ -238,7 +295,6 @@ public:
     bool mDrawGui = true;
     virtual void draw() override
     {
-
         // Depth only pass
         {
             glDepthMask(GL_TRUE);
@@ -290,9 +346,47 @@ public:
             mColorFramebuffer->unbind();
         }
 
+        // Reset accumulation texture if necessary
+        if (mAccumulationFrame == 1) 
+        {
+            mAccumulationSaveFramebuffer->bind();
+
+            glClearColor(0.0, 0.0, 0.0, 1.0);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            mAccumulationSaveFramebuffer->unbind();
+        }
+
+        // Accumulation pipeline
+        {
+            mAccumulationFramebuffer->bind();
+
+            glClearColor(0.0, 0.0, 0.0, 1.0);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            mGIAccumulationShader->setAccumulationFrame(mAccumulationFrame);
+            mGIAccumulationShader->bind();
+
+            mScreenPlane->setShader(mGIAccumulationShader.get());
+            mScreenPlane->draw(getMainCamera());
+
+            mAccumulationFramebuffer->unbind();
+        }
+
+        // Save result to accumulation texture
+        if (mUseIndirect) 
+        {
+            mAccumulationSaveFramebuffer->bind();
+
+            mScreenPlane->setShader(mAccumulationSaveShader.get());
+            mScreenPlane->draw(getMainCamera());
+
+            mAccumulationSaveFramebuffer->unbind();
+        }
+
         // Final pass
         {
-            mScreenPlaneShader->bind();
+            mScreenPlane->setShader(mScreenPresentShader.get());
             mScreenPlane->draw(getMainCamera());
 
             if (mDrawGui)
@@ -492,12 +586,23 @@ private:
     std::shared_ptr<Texture> mColorTexture;
     std::shared_ptr<Framebuffer> mColorFramebuffer;
 
+    // Accumulation
+    std::shared_ptr<Texture> mAccumulationTexture;
+    std::shared_ptr<Framebuffer> mAccumulationSaveFramebuffer;
+    std::shared_ptr<ScreenPlaneShader> mAccumulationSaveShader;
+    uint32_t mAccumulationFrame = 1;
+
+    // Accumulation result texture
+    std::shared_ptr<Framebuffer> mAccumulationFramebuffer;
+    std::shared_ptr<GIAccumulationShader> mGIAccumulationShader;
+    std::shared_ptr<Texture> mResultTexture;
+
     std::unique_ptr<RenderMesh> mScreenPlane;
 
     BoundingBox mModelBBox;
 
     std::unique_ptr<SdfOctreeGIShader> mOctreeGIShader;
-    std::unique_ptr<ScreenPlaneShader> mScreenPlaneShader;
+    std::unique_ptr<GIScreenPresentShader> mScreenPresentShader;
 
     // Options
     int mMaxShadowIterations = 512;
