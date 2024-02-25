@@ -262,15 +262,16 @@ public:
     void update(float deltaTime) override
     {
         auto &wnd = Window::getCurrentWindow();
-        const bool shouldStopIndirect = wnd.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
 
-        if (shouldStopIndirect)
-            mUseIndirect = false;
+        const bool cameraRotated = wnd.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
+        const bool cameraMoved = wnd.isKeyPressed(GLFW_KEY_W) || wnd.isKeyPressed(GLFW_KEY_A) || wnd.isKeyPressed(GLFW_KEY_S) || wnd.isKeyPressed(GLFW_KEY_D);
 
-        if (mUseIndirect)
-            mAccumulationFrame++;
-        else
+        const bool shouldStopIndirect = cameraRotated || cameraMoved;
+
+        if (!mUseIndirect || shouldStopIndirect)
             mAccumulationFrame = 1;
+        else
+            mAccumulationFrame++;
 
         Scene::update(deltaTime);
     }
@@ -314,7 +315,7 @@ public:
         {
             mColorFramebuffer->bind();
 
-            glClearColor(0.9, 0.9, 0.9, 1.0);
+            glClearColor(1.0, 1.0, 1.0, 1.0);
             glClear(GL_COLOR_BUFFER_BIT);
 
             glDepthFunc(GL_LEQUAL);
@@ -347,7 +348,7 @@ public:
         }
 
         // Reset accumulation texture if necessary
-        if (mAccumulationFrame == 1) 
+        if (mAccumulationFrame == 1)
         {
             mAccumulationSaveFramebuffer->bind();
 
@@ -374,7 +375,7 @@ public:
         }
 
         // Save result to accumulation texture
-        if (mUseIndirect) 
+        if (mUseIndirect)
         {
             mAccumulationSaveFramebuffer->bind();
 
