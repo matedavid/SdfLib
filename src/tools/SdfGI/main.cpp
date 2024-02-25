@@ -33,102 +33,11 @@ public:
     {
         Window::getCurrentWindow().setBackgroudColor(glm::vec4(0.9, 0.9, 0.9, 1.0));
 
-        auto windowWidth = (uint)Window::getCurrentWindow().getWindowSize().x;
-        auto windowHeight = (uint)Window::getCurrentWindow().getWindowSize().y;
-
-        // Depth only pass
-        {
-            mDepthTexture = std::make_shared<Texture>(Texture::Description{
-                .width = windowWidth,
-                .height = windowHeight,
-                .internalFormat = GL_DEPTH_COMPONENT,
-                .format = GL_DEPTH_COMPONENT,
-                .pixelDataType = GL_FLOAT,
-            });
-
-            mDepthFramebuffer = std::make_shared<Framebuffer>();
-            mDepthFramebuffer->bind();
-
-            mDepthFramebuffer->attach(*mDepthTexture, GL_DEPTH_ATTACHMENT);
-
-            mDepthFramebuffer->unbind();
-
-            assert(mDepthFramebuffer->bake());
-        }
-
-        // Color pass
-        {
-            mColorTexture = std::make_shared<Texture>(Texture::Description{
-                .width = windowWidth,
-                .height = windowHeight,
-                .internalFormat = GL_RGB32F,
-                .format = GL_RGB,
-                .pixelDataType = GL_FLOAT,
-            });
-
-            mColorFramebuffer = std::make_shared<Framebuffer>();
-            mColorFramebuffer->bind();
-
-            mColorFramebuffer->attach(*mColorTexture, GL_COLOR_ATTACHMENT0);
-            mColorFramebuffer->attach(*mDepthTexture, GL_DEPTH_ATTACHMENT);
-
-            mColorFramebuffer->unbind();
-
-            assert(mColorFramebuffer->bake());
-        }
-
-        // Accumulation
-        {
-            mAccumulationTexture = std::make_shared<Texture>(Texture::Description{
-                .width = windowWidth,
-                .height = windowHeight,
-                .internalFormat = GL_RGB32F,
-                .format = GL_RGB,
-                .pixelDataType = GL_FLOAT,
-            });
-
-            mResultTexture = std::make_shared<Texture>(Texture::Description{
-                .width = windowWidth,
-                .height = windowHeight,
-                .internalFormat = GL_RGB32F,
-                .format = GL_RGB,
-                .pixelDataType = GL_FLOAT,
-            });
-
-            mAccumulationFramebuffer = std::make_shared<Framebuffer>();
-            mAccumulationFramebuffer->bind();
-
-            mAccumulationFramebuffer->attach(*mResultTexture, GL_COLOR_ATTACHMENT0);
-
-            mAccumulationFramebuffer->unbind();
-
-            assert(mAccumulationFramebuffer->bake());
-
-            mGIAccumulationShader = std::make_shared<GIAccumulationShader>();
-            mGIAccumulationShader->setColorTexture(mColorTexture->id());
-            mGIAccumulationShader->setAccumulationTexture(mAccumulationTexture->id());
-        }
-
-        // Save accumulation
-        {
-            mAccumulationSaveFramebuffer = std::make_shared<Framebuffer>();
-            mAccumulationSaveFramebuffer->bind();
-
-            mAccumulationSaveFramebuffer->attach(*mAccumulationTexture, GL_COLOR_ATTACHMENT0);
-
-            mAccumulationSaveFramebuffer->unbind();
-
-            assert(mAccumulationSaveFramebuffer->bake());
-
-            mAccumulationSaveShader = std::make_unique<ScreenPlaneShader>();
-            mAccumulationSaveShader->setInputTexture(mResultTexture->id());
-        }
-
-        // Present
-        {
-            mScreenPresentShader = std::make_unique<GIScreenPresentShader>();
-            mScreenPresentShader->setInputTexture(mResultTexture->id());
-        }
+        const auto &[windowWidth, windowHeight] = [&]() {
+            const auto size = Window::getCurrentWindow().getWindowSize();
+            return std::make_pair(size.x, size.y);
+        }();
+        initPipeline(windowWidth, windowHeight);
 
         // Full screen plane
         {
@@ -259,6 +168,107 @@ public:
         mCamera = camera;
     }
 
+    void initPipeline(uint32_t width, uint32_t height)
+    {
+        glFinish();
+
+        // Depth only pass
+        {
+            mDepthTexture = std::make_shared<Texture>(Texture::Description{
+                .width = width,
+                .height = height,
+                .internalFormat = GL_DEPTH_COMPONENT,
+                .format = GL_DEPTH_COMPONENT,
+                .pixelDataType = GL_FLOAT,
+            });
+
+            mDepthFramebuffer = std::make_shared<Framebuffer>();
+            mDepthFramebuffer->bind();
+
+            mDepthFramebuffer->attach(*mDepthTexture, GL_DEPTH_ATTACHMENT);
+
+            mDepthFramebuffer->unbind();
+
+            assert(mDepthFramebuffer->bake());
+        }
+
+        // Color pass
+        {
+            mColorTexture = std::make_shared<Texture>(Texture::Description{
+                .width = width,
+                .height = height,
+                .internalFormat = GL_RGB32F,
+                .format = GL_RGB,
+                .pixelDataType = GL_FLOAT,
+            });
+
+            mColorFramebuffer = std::make_shared<Framebuffer>();
+            mColorFramebuffer->bind();
+
+            mColorFramebuffer->attach(*mColorTexture, GL_COLOR_ATTACHMENT0);
+            mColorFramebuffer->attach(*mDepthTexture, GL_DEPTH_ATTACHMENT);
+
+            mColorFramebuffer->unbind();
+
+            assert(mColorFramebuffer->bake());
+        }
+
+        // Accumulation
+        {
+            mAccumulationTexture = std::make_shared<Texture>(Texture::Description{
+                .width = width,
+                .height = height,
+                .internalFormat = GL_RGB32F,
+                .format = GL_RGB,
+                .pixelDataType = GL_FLOAT,
+            });
+
+            mResultTexture = std::make_shared<Texture>(Texture::Description{
+                .width = width,
+                .height = height,
+                .internalFormat = GL_RGB32F,
+                .format = GL_RGB,
+                .pixelDataType = GL_FLOAT,
+            });
+
+            mAccumulationFramebuffer = std::make_shared<Framebuffer>();
+            mAccumulationFramebuffer->bind();
+
+            mAccumulationFramebuffer->attach(*mResultTexture, GL_COLOR_ATTACHMENT0);
+
+            mAccumulationFramebuffer->unbind();
+
+            assert(mAccumulationFramebuffer->bake());
+
+            mGIAccumulationShader = std::make_shared<GIAccumulationShader>();
+            mGIAccumulationShader->setColorTexture(mColorTexture->id());
+            mGIAccumulationShader->setAccumulationTexture(mAccumulationTexture->id());
+        }
+
+        // Save accumulation
+        {
+            mAccumulationSaveFramebuffer = std::make_shared<Framebuffer>();
+            mAccumulationSaveFramebuffer->bind();
+
+            mAccumulationSaveFramebuffer->attach(*mAccumulationTexture, GL_COLOR_ATTACHMENT0);
+
+            mAccumulationSaveFramebuffer->unbind();
+
+            assert(mAccumulationSaveFramebuffer->bake());
+
+            mAccumulationSaveShader = std::make_unique<ScreenPlaneShader>();
+            mAccumulationSaveShader->setInputTexture(mResultTexture->id());
+        }
+
+        // Present
+        {
+            mScreenPresentShader = std::make_unique<GIScreenPresentShader>();
+            mScreenPresentShader->setInputTexture(mResultTexture->id());
+        }
+
+        glFinish();
+    }
+
     void update(float deltaTime) override
     {
         auto &wnd = Window::getCurrentWindow();
@@ -274,6 +284,14 @@ public:
             mAccumulationFrame++;
 
         Scene::update(deltaTime);
+    }
+
+    void resize(glm::ivec2 windowSize) override
+    {
+        glFinish();
+
+        mCamera->resize(windowSize);
+        initPipeline(windowSize.x, windowSize.y);
     }
 
     void drawModel()
@@ -366,7 +384,6 @@ public:
             glClear(GL_COLOR_BUFFER_BIT);
 
             mGIAccumulationShader->setAccumulationFrame(mAccumulationFrame);
-            mGIAccumulationShader->bind();
 
             mScreenPlane->setShader(mGIAccumulationShader.get());
             mScreenPlane->draw(getMainCamera());
@@ -387,12 +404,21 @@ public:
 
         // Final pass
         {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            glDisable(GL_DEPTH_TEST);
+
+            glClearColor(0.7, 0.1, 0.2, 1.0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
             mScreenPlane->setShader(mScreenPresentShader.get());
             mScreenPlane->draw(getMainCamera());
 
             if (mDrawGui)
                 drawGui();
             Scene::draw();
+
+            glEnable(GL_DEPTH_TEST);
         }
     }
 
