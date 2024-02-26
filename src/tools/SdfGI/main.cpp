@@ -333,7 +333,7 @@ public:
         {
             mColorFramebuffer->bind();
 
-            glClearColor(1.0, 1.0, 1.0, 1.0);
+            glClearColor(0.0, 0.0, 0.0, 1.0);
             glClear(GL_COLOR_BUFFER_BIT);
 
             glDepthFunc(GL_LEQUAL);
@@ -477,9 +477,15 @@ public:
                     });
                 }
 
-                exporter.save("mitsuba_scene.xml");
+                constexpr const char* fileName = "mitsuba_scene.xml";
+                exporter.save(fileName);
+                spdlog::info("Scene exported into: {}", fileName);
+            }
+
+            if (ImGui::Button("Take Screenshot"))
+            {
                 takeScreenshot();
-                std::cout << "Screenshot taken!\n";
+                spdlog::info("Screenshot taken!");
             }
 
             ImGui::Text("Lighting settings");
@@ -589,6 +595,7 @@ public:
             }
 
             file.close();
+            delete[] pixels;
         }
 
         window.setWindowSize(glm::ivec2(width, height));
