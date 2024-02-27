@@ -22,7 +22,50 @@ Mesh::Mesh(std::string filePath)
         SPDLOG_ERROR("The model {} does not have any mesh assosiated", filePath);
     }
 
-    initMesh(scene->mMeshes[0]);       
+    SPDLOG_INFO("Num meshes: {}", scene->mNumMeshes);
+    // initMesh(scene->mMeshes[0]);
+
+    std::vector<glm::vec3> vertices;
+    std::vector<uint32_t> indices;
+    std::vector<glm::vec3> normals; 
+
+    for (std::size_t m = 0; m < scene->mNumMeshes; m++)
+    {
+        const uint32_t vertexStartPos = vertices.size();
+
+        const auto* mesh = scene->mMeshes[m];
+        if(!(mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE))
+            SPDLOG_ERROR("The model must be a triangle mesh");
+
+        for (std::size_t v = 0; v < mesh->mNumVertices; ++v) 
+        {
+            vertices.push_back(glm::vec3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z));
+
+            if (mesh->HasNormals())
+                normals.push_back(glm::vec3(mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z));
+        }
+
+        for (std::size_t f = 0; f < mesh->mNumFaces; ++f) 
+        {
+            const auto& face = mesh->mFaces[f];
+            assert(face.mNumIndices == 3);
+            indices.push_back(face.mIndices[0]+vertexStartPos);
+            indices.push_back(face.mIndices[1]+vertexStartPos);
+            indices.push_back(face.mIndices[2]+vertexStartPos);
+        }
+    }
+
+    mVertices = vertices;
+    mIndices = indices;
+    mNormals = normals;
+
+    // Calculate bounding box
+    computeBoundingBox();
+    SPDLOG_INFO("BB min: {}, {}, {}", mBBox.min.x, mBBox.min.y, mBBox.min.z);
+    SPDLOG_INFO("BB max: {}, {}, {}", mBBox.max.x, mBBox.max.y, mBBox.max.z);
+
+    // Indices
+    SPDLOG_INFO("Model num faces: {}", mIndices.size() / 3);
 }
 
 Mesh::Mesh(const aiMesh* mesh)
