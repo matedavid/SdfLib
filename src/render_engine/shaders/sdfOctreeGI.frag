@@ -26,6 +26,7 @@ uniform bool useIndirect;
 uniform int numSamples;
 uniform int maxDepth;
 uniform int maxRaycastIterations;
+uniform bool useDirectSphereSampling;
 
 //Options 
 uniform int maxShadowIterations;
@@ -596,11 +597,24 @@ vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle
     return color / float(numSamples);
 }
 
+vec3 getDirectLighting(vec3 pos, vec3 N, vec3 V, uint seed, out float solidAngle)
+{
+    if (useDirectSphereSampling)
+    {
+        return sphereSamplingDirectLight(pos, N, seed, solidAngle);
+    } 
+    else
+    {
+        return getColor(pos, N, V);
+    }
+}
+
 #define indirectLightRec(name, name0)                                              \
 vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                          \
 {                                                                                  \
-    vec3 directLight = getColor(pos, N, V);                                        \
-    if (depth == 0) return directLight*(matAlbedo/PI);                             \
+    float solidAngle;                                                              \
+    vec3 directLight = getDirectLighting(pos, N, V, seed, solidAngle);             \
+    if (depth == 0) return directLight * (matAlbedo/PI);                           \
                                                                                    \
     vec3 indirectLight = vec3(0.0);                                                \
     for (int i = 0; i < numSamples; ++i)                                           \
@@ -642,7 +656,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
     return (directLight + indirectLight) * (matAlbedo / PI);                       \
 }
 
-vec3 indirectLightDepth5(vec3 pos, vec3 N, vec3 V, int depth, uint seed) { return getColor(pos, N, V) * (matAlbedo/PI); }
+vec3 indirectLightDepth5(vec3 pos, vec3 N, vec3 V, int depth, uint seed) { float solidAngle; return getDirectLighting(pos, N, V, seed, solidAngle) * (matAlbedo/PI); }
 indirectLightRec(indirectLightDepth4, indirectLightDepth5);
 indirectLightRec(indirectLightDepth3, indirectLightDepth4);
 indirectLightRec(indirectLightDepth2, indirectLightDepth3);
@@ -663,7 +677,8 @@ void main()
     vec3 color = vec3(0.0);
     if (!useIndirect) 
     {
-        color = getColor(gridPosition, N, V) * (matAlbedo / PI);
+        float solidAngle;
+        color = getDirectLighting(gridPosition, N, V, seed, solidAngle) * (matAlbedo / PI);
         // float solidAngle;
         // color = sphereSamplingDirectLight(gridPosition, N, seed, solidAngle);
     } 

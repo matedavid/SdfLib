@@ -307,6 +307,7 @@ public:
         mOctreeGIShader->setNumSamples(mNumSamples);
         mOctreeGIShader->setMaxDepth(mMaxDepth);
         mOctreeGIShader->setMaxRaycastIterations(mMaxRaycastIterations);
+        mOctreeGIShader->setUseDirectSphereSampling(mUseDirectSphereSampling);
 
         mModelRenderer->draw(getMainCamera());
     }
@@ -449,6 +450,7 @@ public:
             ImGui::InputInt("Num Samples", &mNumSamples);
             ImGui::InputInt("Max Depth", &mMaxDepth);
             ImGui::InputInt("Max Raycast Iterations", &mMaxRaycastIterations);
+            ImGui::Checkbox("Use Direct Sphere Sampling", &mUseDirectSphereSampling);
 
             if (ImGui::Button("Export scene"))
             {
@@ -647,6 +649,7 @@ private:
     int mNumSamples = 2;
     int mMaxDepth = 1;
     int mMaxRaycastIterations = 50;
+    bool mUseDirectSphereSampling = false;
 
     // Lighting
     int mLightNumber = 1;

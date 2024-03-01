@@ -41,6 +41,7 @@ public:
         mNumSamplesLocation = glGetUniformLocation(mRenderProgramId, "numSamples");
         mMaxDepthLocation = glGetUniformLocation(mRenderProgramId, "maxDepth");
         mMaxRaycastIterationsLocation = glGetUniformLocation(mRenderProgramId, "maxRaycastIterations");
+        mUseDirectSphereSamplingLocation = glGetUniformLocation(mRenderProgramId, "useDirectSphereSampling");
 
         //Options
         mUseSoftShadowsLocation = glGetUniformLocation(mRenderProgramId, "useSoftShadows");
@@ -88,6 +89,11 @@ public:
     void setMaxRaycastIterations(int maxIterations)
     {
         mMaxRaycastIterations = maxIterations;
+    }
+
+    void setUseDirectSphereSampling(bool useDirectSphereSampling)
+    {
+        mUseDirectSphereSampling = useDirectSphereSampling;
     }
 
     //Options
@@ -147,6 +153,7 @@ public:
         glUniform1i(mNumSamplesLocation, mNumSamples);
         glUniform1i(mMaxDepthLocation, mMaxDepth);
         glUniform1i(mMaxRaycastIterationsLocation, mMaxRaycastIterations);
+        glUniform1i(mUseDirectSphereSamplingLocation, mUseDirectSphereSampling);
 
         //Options
         glUniform1i(mUseSoftShadowsLocation, mUseSoftShadows);
@@ -202,6 +209,9 @@ private:
 
     unsigned int mMaxRaycastIterationsLocation;
     int mMaxRaycastIterations;
+
+    unsigned int mUseDirectSphereSamplingLocation;
+    bool mUseDirectSphereSampling = false;
 
     //Options
     unsigned int mMaxShadowIterationsLocation;
