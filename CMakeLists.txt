@@ -171,12 +171,24 @@ if(SDFLIB_BUILD_APPS)
         src/tools/SdfGI/MitsubaExporter.cpp
         src/tools/SdfGI/Texture.cpp
         src/tools/SdfGI/Framebuffer.cpp
+        src/tools/SdfGI/SceneOctree.cpp
 
         ${RENDER_ENGINE_SOURCE_FILES} ${RENDER_ENGINE_HEADER_FILES}
         ${RENDER_ENGINE_SHADERS_SOURCE_FILES} ${RENDER_ENGINE_SHADERS_HEADER_FILES})
     target_link_libraries(SdfGI PUBLIC ${PROJECT_NAME} glfw imgui imguizmo glad)
     target_include_directories(SdfGI PRIVATE src/)
     add_dependencies(SdfGI copyShaders)
+
+    add_executable(SdfGIOctreeViewer
+        src/tools/SdfGI/OctreeViewer.cpp
+        src/tools/SdfGI/SceneOctree.cpp
+
+        ${RENDER_ENGINE_SOURCE_FILES} ${RENDER_ENGINE_HEADER_FILES}
+        ${RENDER_ENGINE_SHADERS_SOURCE_FILES} ${RENDER_ENGINE_SHADERS_HEADER_FILES}
+    )
+    target_link_libraries(SdfGIOctreeViewer PUBLIC ${PROJECT_NAME} glfw imgui imguizmo glad)
+    target_include_directories(SdfGIOctreeViewer PRIVATE src/)
+    add_dependencies(SdfGIOctreeViewer copyShaders)
 
     add_executable(SdfExporter src/tools/SdfExporter/main.cpp)
     target_link_libraries(SdfExporter PUBLIC ${PROJECT_NAME})
