@@ -475,6 +475,7 @@ public:
                     exporter.addEmitter({
                         .pos = mLightPosition[i],
                         .intensity = mLightIntensity[i],
+                        .color = mLightColor[i],
                         .radius = mLightRadius[i],
                     });
                 }

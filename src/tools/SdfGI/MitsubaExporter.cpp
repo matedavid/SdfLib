@@ -3,22 +3,22 @@
 #include <fstream>
 #include <glm/gtc/matrix_access.hpp>
 
-void MitsubaExporter::addEmitter(const Emitter& emitter)
+void MitsubaExporter::addEmitter(const Emitter &emitter)
 {
     mEmitters.push_back(emitter);
 }
 
-void MitsubaExporter::addModel(const Model& model)
+void MitsubaExporter::addModel(const Model &model)
 {
     mModels.push_back(model);
 }
 
-void MitsubaExporter::setCamera(const Camera& camera)
+void MitsubaExporter::setCamera(const Camera &camera)
 {
     mCamera = camera;
 }
 
-void MitsubaExporter::save(const std::filesystem::path& path) const
+void MitsubaExporter::save(const std::filesystem::path &path) const
 {
     std::ofstream f(path, std::ios::out);
     f << "<scene version='3.0.0'>";
@@ -62,13 +62,13 @@ void MitsubaExporter::save(const std::filesystem::path& path) const
     f << "</sensor>";
 
     // Models
-    for (const auto& m : mModels)
+    for (const auto &m : mModels)
     {
         f << "<shape type='obj'>";
         f << "<string name='filename' value='" << m.path.string() << "'/>";
         f << "<transform name='to_world'>";
-        f << "<translate x='"<< m.translate.x <<"' y='"<< m.translate.y <<"' z='" << m.translate.z << "' />";
-        f << "<scale value='"<< m.scale.x <<"' />";
+        f << "<translate x='" << m.translate.x << "' y='" << m.translate.y << "' z='" << m.translate.z << "' />";
+        f << "<scale value='" << m.scale.x << "' />";
         f << "</transform>";
         f << R"(
             <bsdf type="diffuse">
@@ -78,24 +78,23 @@ void MitsubaExporter::save(const std::filesystem::path& path) const
         f << "</shape>";
     }
 
-    // Emitters 
-    for (const auto& e : mEmitters)
+    // Emitters
+    for (const auto &e : mEmitters)
     {
+        const auto radiance = e.intensity * e.color / (glm::pi<float>() * e.radius * e.radius);
+
         f << "<shape type='sphere'>";
-        f << "<point name='center' x='"<< e.pos.x <<"' y='"<< e.pos.y <<"' z='"<< e.pos.z <<"' />";
+        f << "<point name='center' x='" << e.pos.x << "' y='" << e.pos.y << "' z='" << e.pos.z << "' />";
         f << "<float name='radius' value='" << e.radius << "' />";
         f << "<emitter type='area'>";
-        f << "<rgb name='radiance' value='"<< e.intensity <<"' />";
+        f << "<rgb name='radiance' value='" << radiance.x << "," << radiance.y << "," << radiance.z << "' />";
         f << "</emitter>";
         f << "</shape>";
         // f << "<emitter type='point'>";
         // f << "<point name='position' x='"<< e.pos.x <<"' y='"<< e.pos.y <<"' z='"<< e.pos.z <<"' />";
         // f << "<rgb name='intensity' value='"<<e.intensity<<"' />";
         // f << "</emitter>";
-
     }
 
     f << "</scene>";
 }
-
-

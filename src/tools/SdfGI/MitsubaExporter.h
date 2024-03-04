@@ -12,6 +12,7 @@ public:
     {
         glm::vec3 pos;
         float intensity;
+        glm::vec3 color;
         float radius;
     };
 
@@ -25,11 +26,11 @@ public:
     MitsubaExporter() = default;
     ~MitsubaExporter() = default;
 
-    void addEmitter(const Emitter& emitter);
-    void addModel(const Model& model);
-    void setCamera(const Camera& camera);
+    void addEmitter(const Emitter &emitter);
+    void addModel(const Model &model);
+    void setCamera(const Camera &camera);
 
-    void save(const std::filesystem::path& path) const;
+    void save(const std::filesystem::path &path) const;
 
 private:
     std::vector<Emitter> mEmitters;
