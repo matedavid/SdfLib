@@ -158,9 +158,9 @@ public:
         // Move camera in the z-axis to be able to see the whole model
         BoundingBox BB = mesh.getBoundingBox();
         float zMovement = 0.5f * glm::max(BB.getSize().x, BB.getSize().y) / glm::tan(glm::radians(0.5f * camera->getFov()));
-        // camera->setPosition(glm::vec3(0.0f, 0.0f, 0.1f * BB.getSize().z + zMovement));
-        camera->setPosition(glm::vec3(0.8f, 0.6f, 0.0f));
-        camera->setOrientation(glm::quat(glm::vec3(glm::radians(-30.0f), glm::radians(90.0f), 0.0f)));
+        camera->setPosition(glm::vec3(0.0f, 0.0f, 0.1f * BB.getSize().z + zMovement));
+        // camera->setPosition(glm::vec3(0.8f, 0.6f, 0.0f));
+        // camera->setOrientation(glm::quat(glm::vec3(glm::radians(-30.0f), glm::radians(90.0f), 0.0f)));
 
         camera->start();
         setMainCamera(camera);
@@ -479,16 +479,16 @@ public:
                     });
                 }
 
-                constexpr const char* fileName = "mitsuba_scene.xml";
-                exporter.save(fileName);
-                spdlog::info("Scene exported into: {}", fileName);
+                constexpr const char filename[] = "mitsuba_scene.xml";
+                exporter.save(filename);
+                spdlog::info("Scene exported into: {}", filename);
             }
 
-            if (ImGui::Button("Take Screenshot"))
-            {
-                takeScreenshot();
-                spdlog::info("Screenshot taken!");
-            }
+            // if (ImGui::Button("Take Screenshot"))
+            // {
+            //     takeScreenshot();
+            //     spdlog::info("Screenshot taken!");
+            // }
 
             ImGui::Text("Lighting settings");
             ImGui::SliderInt("Lights", &mLightNumber, 1, 4);

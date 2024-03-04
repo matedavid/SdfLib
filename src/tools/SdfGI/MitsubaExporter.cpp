@@ -37,12 +37,17 @@ void MitsubaExporter::save(const std::filesystem::path& path) const
 
     // Camera
     const auto pos = mCamera.getPosition();
-    const auto lat = -glm::vec3(glm::column(mCamera.getViewMatrix(), 2)) * 5.0f;
+
+    const auto viewMatrix = mCamera.getViewMatrix();
+    auto viewDirection = glm::vec3(-viewMatrix[0][2], -viewMatrix[1][2], -viewMatrix[2][2]);
+    viewDirection = glm::normalize(viewDirection);
+
+    const auto lookAt = pos + viewDirection * mCamera.getZNear();
 
     f << "<sensor type='perspective' id='sensor'>";
     f << "<float name='fov' value='" << mCamera.getFov() << "' />";
     f << "<transform name='to_world'>";
-    f << "<lookat target='" << 0.0f << ", " << 0.0f << ", " << 0.0f << "' origin='" << pos.x << ", " << pos.y << ", " << pos.z << "' up='0,1,0' />";
+    f << "<lookat target='" << lookAt.x << ", " << lookAt.y << ", " << lookAt.z << "' origin='" << pos.x << ", " << pos.y << ", " << pos.z << "' up='0,1,0' />";
     f << "</transform>";
     f << R"(
         <sampler type="independent">
