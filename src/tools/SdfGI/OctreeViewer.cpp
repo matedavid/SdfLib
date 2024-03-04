@@ -87,7 +87,7 @@ public:
 
             auto transform = glm::mat4(1.0f);
             transform = glm::translate(transform, node->center);
-            transform = glm::scale(transform, glm::vec3(size));
+            transform = glm::scale(transform, glm::vec3(size * 0.5));
 
             mCubeRenderer->setTransform(transform);
             mCubeRenderer->draw(getMainCamera());
