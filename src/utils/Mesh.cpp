@@ -9,7 +9,7 @@ namespace sdflib
 Mesh::Mesh(std::string filePath)
 {
     Assimp::Importer import;
-    const aiScene *scene = import.ReadFile(filePath, aiProcess_Triangulate | aiProcess_FlipUVs);
+    const aiScene *scene = import.ReadFile(filePath, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_OptimizeMeshes);
     
     if(!scene || !scene->mRootNode || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE)
     {
@@ -33,6 +33,9 @@ Mesh::Mesh(std::string filePath)
         if(!(mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE))
             SPDLOG_ERROR("The model must be a triangle mesh");
 
+        if (mesh->mNumVertices == 0 || mesh->mNumFaces == 0)
+            continue;
+
         for (std::size_t v = 0; v < mesh->mNumVertices; ++v) 
         {
             mVertices.push_back(glm::vec3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z));
@@ -49,6 +52,27 @@ Mesh::Mesh(std::string filePath)
             mIndices.push_back(face.mIndices[1]+vertexStartPos);
             mIndices.push_back(face.mIndices[2]+vertexStartPos);
         }
+
+        // material
+        if (mesh->mMaterialIndex < 0) {
+            for (std::size_t f = 0; f < mesh->mNumFaces; ++f) 
+                mColorPerTriangle.push_back(glm::vec3(0.0f));
+
+            continue;
+        }
+
+        const auto material = scene->mMaterials[mesh->mMaterialIndex];
+
+        aiColor3D aiColor;
+        glm::vec3 color;
+        if (material->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor) == aiReturn_SUCCESS) {
+            color = glm::vec3(aiColor.r, aiColor.g, aiColor.b);
+        } else {
+            color = glm::vec3(0.0f);
+        }
+
+        for (std::size_t f = 0; f < mesh->mNumFaces; ++f) 
+            mColorPerTriangle.push_back(color);
     }
 
     // Calculate bounding box

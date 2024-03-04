@@ -89,6 +89,9 @@ public:
     std::vector<glm::vec3>& getNormals() { return mNormals; }
     const std::vector<glm::vec3>& getNormals() const { return mNormals; }
 
+    std::vector<glm::vec3>& getColorPerTriangle() { return mColorPerTriangle; }
+    const std::vector<glm::vec3>& getColorPerTriangle() const { return mColorPerTriangle; }
+
     const BoundingBox& getBoundingBox() const { return mBBox; }
 
     void computeBoundingBox();
@@ -102,6 +105,9 @@ private:
     std::vector<glm::vec3> mVertices;
     std::vector<uint32_t> mIndices;
     std::vector<glm::vec3> mNormals;
+
+    std::vector<glm::vec3> mColorPerTriangle;
+
     BoundingBox mBBox;
 };
 }

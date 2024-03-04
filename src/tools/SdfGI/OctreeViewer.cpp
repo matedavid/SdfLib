@@ -81,13 +81,13 @@ public:
 
         for (const auto &node : mCubes)
         {
-            glUniform3f(loc, 1.0f, 1.0f, 1.0f);
+            glUniform3f(loc, node->color.r, node->color.g, node->color.b);
 
             const auto size = node->halfSize* 2.0f;
 
             auto transform = glm::mat4(1.0f);
             transform = glm::translate(transform, node->center);
-            transform = glm::scale(transform, glm::vec3(size * 0.5));
+            transform = glm::scale(transform, glm::vec3(size));
 
             mCubeRenderer->setTransform(transform);
             mCubeRenderer->draw(getMainCamera());
@@ -131,7 +131,7 @@ int main(int argc, char **argv)
                             glm::translate(glm::mat4(1.0), -mesh.getBoundingBox().getCenter()));
     }
 
-    auto scene = std::make_shared<SceneOctree>(mesh, 7);
+    auto scene = std::make_shared<SceneOctree>(mesh, 8);
     OctreeViewer viewer(scene);
 
     MainLoop loop;

@@ -27,6 +27,8 @@ struct OctreeNode
     int depth;
     Type type;
 
+    glm::vec3 color{0.0f};
+
     std::vector<size_t> triangles;
     std::array<std::unique_ptr<OctreeNode>, 8> children;
 };
@@ -52,6 +54,6 @@ private:
     std::vector<Triangle> mTriangles;
     std::vector<glm::vec3> mVertices;
 
-    void renderNode(const std::unique_ptr<OctreeNode> &node, const sdflib::Mesh& mesh);
+    void renderNode(std::unique_ptr<OctreeNode> &node, const sdflib::Mesh& mesh);
     void slowTriangleIntersectionTest(sdflib::BoundingBox bbox, const std::vector<size_t> &triangles, std::vector<size_t> &outTriangles);
 };
