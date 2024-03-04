@@ -41,10 +41,10 @@ SceneOctree::SceneOctree(const sdflib::Mesh &mesh, int maxDepth)
         .triangles = triangleIndices,
     });
 
-    renderNode(mRoot);
+    renderNode(mRoot, mesh);
 }
 
-void SceneOctree::renderNode(const std::unique_ptr<OctreeNode> &node)
+void SceneOctree::renderNode(const std::unique_ptr<OctreeNode> &node, const sdflib::Mesh& mesh)
 {
     if (node->depth >= mRenderConfig.maxDepth)
     {
@@ -111,7 +111,7 @@ void SceneOctree::renderNode(const std::unique_ptr<OctreeNode> &node)
                                       : OctreeNode::Type::Gray;
 
         if (node->children[i]->type == OctreeNode::Type::Gray)
-            renderNode(node->children[i]);
+            renderNode(node->children[i], mesh);
     }
 }
 

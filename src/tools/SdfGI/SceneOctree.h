@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <glm/glm.hpp>
 
 #include "SdfLib/utils/Mesh.h"
 
@@ -27,7 +28,6 @@ struct OctreeNode
     Type type;
 
     std::vector<size_t> triangles;
-    // Children order: x first, y second, z third
     std::array<std::unique_ptr<OctreeNode>, 8> children;
 };
 
@@ -52,6 +52,6 @@ private:
     std::vector<Triangle> mTriangles;
     std::vector<glm::vec3> mVertices;
 
-    void renderNode(const std::unique_ptr<OctreeNode> &node);
+    void renderNode(const std::unique_ptr<OctreeNode> &node, const sdflib::Mesh& mesh);
     void slowTriangleIntersectionTest(sdflib::BoundingBox bbox, const std::vector<size_t> &triangles, std::vector<size_t> &outTriangles);
 };
