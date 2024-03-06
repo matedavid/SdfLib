@@ -308,6 +308,7 @@ public:
         mOctreeGIShader->setMaxDepth(mMaxDepth);
         mOctreeGIShader->setMaxRaycastIterations(mMaxRaycastIterations);
         mOctreeGIShader->setUseDirectSphereSampling(mUseDirectSphereSampling);
+        mOctreeGIShader->setFrameIndex(mAccumulationFrame);
 
         mModelRenderer->draw(getMainCamera());
     }

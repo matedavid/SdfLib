@@ -27,6 +27,7 @@ uniform int numSamples;
 uniform int maxDepth;
 uniform int maxRaycastIterations;
 uniform bool useDirectSphereSampling;
+uniform int frameIndex;
 
 //Options 
 uniform int maxShadowIterations;
@@ -669,7 +670,7 @@ void main()
         return;
     }
 
-    uint seed = uint(gl_FragCoord.x) * uint(gl_FragCoord.y) + uint(time);
+    uint seed = pcg_hash(pcg_hash(uint(gl_FragCoord.x)) + pcg_hash(uint(gl_FragCoord.y)) + pcg_hash(uint(time + frameIndex)));
 
     vec3 N = normalize(gridNormal);
     vec3 V = normalize(cameraPos - gridPosition);
