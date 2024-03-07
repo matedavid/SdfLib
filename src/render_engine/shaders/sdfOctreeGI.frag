@@ -21,13 +21,16 @@ uint roundFloat(float a)
 
 uniform float epsilon;
 
-// Global Illumination Options
+// GI Options
 uniform bool useIndirect;
 uniform int numSamples;
 uniform int maxDepth;
 uniform int maxRaycastIterations;
 uniform bool useDirectSphereSampling;
 uniform int frameIndex;
+
+// GI Skybox
+uniform vec3 skyboxColor;
 
 //Options 
 uniform int maxShadowIterations;
@@ -649,6 +652,10 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
                 name0(hitPosition, NIndirect, VIndirect, depth-1, seed)            \
                 * max(dot(N, direction), 0.0);                                     \
             indirectLight += indirectColor / pdf;                                  \
+        }                                                                          \
+        else                                                                       \
+        {                                                                          \
+            indirectLight += skyboxColor;                                          \
         }                                                                          \
     }                                                                              \
                                                                                    \

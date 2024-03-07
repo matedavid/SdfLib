@@ -43,6 +43,7 @@ public:
         mMaxRaycastIterationsLocation = glGetUniformLocation(mRenderProgramId, "maxRaycastIterations");
         mUseDirectSphereSamplingLocation = glGetUniformLocation(mRenderProgramId, "useDirectSphereSampling");
         mFrameIndexLocation = glGetUniformLocation(mRenderProgramId, "frameIndex");
+        mSkyboxColorLocation = glGetUniformLocation(mRenderProgramId, "skyboxColor");
 
         //Options
         mUseSoftShadowsLocation = glGetUniformLocation(mRenderProgramId, "useSoftShadows");
@@ -100,6 +101,10 @@ public:
     void setFrameIndex(int frameIndex)
     {
         mFrameIndex = frameIndex;
+    }
+
+    void setSkyboxColor(glm::vec3 skyboxColor) {
+        mSkyboxColor = skyboxColor;
     }
 
     //Options
@@ -161,6 +166,7 @@ public:
         glUniform1i(mMaxRaycastIterationsLocation, mMaxRaycastIterations);
         glUniform1i(mUseDirectSphereSamplingLocation, mUseDirectSphereSampling);
         glUniform1i(mFrameIndexLocation, mFrameIndex);
+        glUniform3f(mSkyboxColorLocation, mSkyboxColor.r, mSkyboxColor.g, mSkyboxColor.b);
 
         //Options
         glUniform1i(mUseSoftShadowsLocation, mUseSoftShadows);
@@ -222,6 +228,9 @@ private:
 
     unsigned int mFrameIndexLocation;
     int mFrameIndex;
+
+    unsigned int mSkyboxColorLocation;
+    glm::vec3 mSkyboxColor;
 
     //Options
     unsigned int mMaxShadowIterationsLocation;

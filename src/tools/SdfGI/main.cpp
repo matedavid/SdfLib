@@ -309,6 +309,7 @@ public:
         mOctreeGIShader->setMaxRaycastIterations(mMaxRaycastIterations);
         mOctreeGIShader->setUseDirectSphereSampling(mUseDirectSphereSampling);
         mOctreeGIShader->setFrameIndex(mAccumulationFrame);
+        mOctreeGIShader->setSkyboxColor(mSkyboxColor);
 
         mModelRenderer->draw(getMainCamera());
     }
@@ -453,6 +454,8 @@ public:
             ImGui::InputInt("Max Raycast Iterations", &mMaxRaycastIterations);
             ImGui::Checkbox("Use Direct Sphere Sampling", &mUseDirectSphereSampling);
 
+            ImGui::ColorEdit3("Skybox color", reinterpret_cast<float *>(&mSkyboxColor[0]));
+
             if (ImGui::Button("Export scene"))
             {
                 MitsubaExporter exporter;
@@ -493,7 +496,7 @@ public:
             // }
 
             ImGui::Text("Lighting settings");
-            ImGui::SliderInt("Lights", &mLightNumber, 1, 4);
+            ImGui::SliderInt("Lights", &mLightNumber, 0, 4);
 
             for (int i = 0; i < mLightNumber; ++i)
             { // DOES NOT WORK, PROBLEM WITH REFERENCES
@@ -634,6 +637,9 @@ private:
     std::shared_ptr<Framebuffer> mAccumulationFramebuffer;
     std::shared_ptr<GIAccumulationShader> mGIAccumulationShader;
     std::shared_ptr<Texture> mResultTexture;
+
+    // Skybox
+    glm::vec3 mSkyboxColor{0.0f};
 
     std::unique_ptr<RenderMesh> mScreenPlane;
 
