@@ -718,16 +718,11 @@ void main()
     {
         float solidAngle;
         color = getDirectLighting(gridPosition, N, V, seed, solidAngle) * (matAlbedo / PI);
-        // float solidAngle;
-        // color = sphereSamplingDirectLight(gridPosition, N, seed, solidAngle);
     } 
     else
     {
         color = indirectLightDepth0(gridPosition, N, V, maxDepth, seed);
     }
-
-    // color = color / (color + vec3(1.0));
-    // color = pow(color, vec3(1.0/2.2));
 
     fragColor = vec4(color, 1.0);
 }
