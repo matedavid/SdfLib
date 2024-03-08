@@ -527,6 +527,22 @@ vec3 randomCosineWeightedHemispherePoint(vec3 rand, vec3 n) {
     return tangent * ph.x + bitangent * ph.y + n * ph.z;
 }
 
+vec3 randomSpherePoint(vec3 rand) {
+    float ang1 = (rand.x + 1.0) * PI; // [-1..1) -> [0..2*PI)
+    float u = rand.y; // [-1..1), cos and acos(2v-1) cancel each other out, so we arrive at [-1..1)
+    float u2 = u * u;
+    float sqrt1MinusU2 = sqrt(1.0 - u2);
+    float x = sqrt1MinusU2 * cos(ang1);
+    float y = sqrt1MinusU2 * sin(ang1);
+    float z = u;
+    return vec3(x, y, z);
+}
+
+vec3 randomHemispherePoint(vec3 rand, vec3 n) {
+    vec3 v = randomSpherePoint(rand);
+    return v * sign(dot(v, n));
+}
+
 bool raycast(vec3 startPos, vec3 dir, out vec3 resultPos)
 {
     resultPos = startPos;
@@ -643,10 +659,10 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         float r2 = randomFloatRange(-1, 1, seed, seed);                            \
         float r3 = randomFloatRange(-1, 1, seed, seed);                            \
                                                                                    \
-        vec3 direction = randomCosineWeightedHemispherePoint(vec3(r1, r2, r3), N); \
+        vec3 direction = randomHemispherePoint(vec3(r1, r2, r3), N);               \
         direction = normalize(direction);                                          \
                                                                                    \
-        float pdf = max(dot(N, direction) / PI, 0.0);                              \
+        float pdf = 1.0 / (2.0 * PI);                                              \
                                                                                    \
         vec3 hitPosition;                                                          \
         bool hit = raycast(pos + epsilon * N, direction, hitPosition);             \
@@ -669,7 +685,8 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         }                                                                          \
         else                                                                       \
         {                                                                          \
-            indirectLight += getSkyboxColor(direction);                            \
+            indirectLight += getSkyboxColor(direction)                             \
+                * max(dot(N, direction), 0.0) / pdf;                               \
         }                                                                          \
     }                                                                              \
                                                                                    \
