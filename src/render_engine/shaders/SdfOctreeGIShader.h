@@ -9,6 +9,8 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <algorithm>
 
+#include "tools/SdfGI/Cubemap.h"
+
 class SdfOctreeGIShader : public Shader<SdfOctreeGIShader>
 {
 public:
@@ -43,7 +45,9 @@ public:
         mMaxRaycastIterationsLocation = glGetUniformLocation(mRenderProgramId, "maxRaycastIterations");
         mUseDirectSphereSamplingLocation = glGetUniformLocation(mRenderProgramId, "useDirectSphereSampling");
         mFrameIndexLocation = glGetUniformLocation(mRenderProgramId, "frameIndex");
+        mUseCubemapSkyboxLocation = glGetUniformLocation(mRenderProgramId, "useCubemapSkybox");
         mSkyboxColorLocation = glGetUniformLocation(mRenderProgramId, "skyboxColor");
+        mCubemapSkyboxLocation = glGetUniformLocation(mRenderProgramId, "cubemapSkybox");
 
         //Options
         mUseSoftShadowsLocation = glGetUniformLocation(mRenderProgramId, "useSoftShadows");
@@ -103,8 +107,17 @@ public:
         mFrameIndex = frameIndex;
     }
 
+    void setUseCubemapSkybox(bool use) {
+        mUseCubemapSkybox = use;
+    }
+
     void setSkyboxColor(glm::vec3 skyboxColor) {
         mSkyboxColor = skyboxColor;
+    }
+
+    void setCubemapSkybox(std::shared_ptr<Cubemap> skybox)
+    {
+        mCubemapSkybox = std::move(skybox);
     }
 
     //Options
@@ -166,7 +179,14 @@ public:
         glUniform1i(mMaxRaycastIterationsLocation, mMaxRaycastIterations);
         glUniform1i(mUseDirectSphereSamplingLocation, mUseDirectSphereSampling);
         glUniform1i(mFrameIndexLocation, mFrameIndex);
+        glUniform1f(mUseCubemapSkyboxLocation, mUseCubemapSkybox);
         glUniform3f(mSkyboxColorLocation, mSkyboxColor.r, mSkyboxColor.g, mSkyboxColor.b);
+
+        if (mUseCubemapSkybox && mCubemapSkybox != nullptr)
+        {
+            glUniform1f(mCubemapSkyboxLocation, 0);
+            mCubemapSkybox->bind(0);
+        }
 
         //Options
         glUniform1i(mUseSoftShadowsLocation, mUseSoftShadows);
@@ -229,8 +249,14 @@ private:
     unsigned int mFrameIndexLocation;
     int mFrameIndex;
 
+    unsigned int mUseCubemapSkyboxLocation;
+    bool mUseCubemapSkybox = false;
+
     unsigned int mSkyboxColorLocation;
     glm::vec3 mSkyboxColor;
+
+    unsigned int mCubemapSkyboxLocation;
+    std::shared_ptr<Cubemap> mCubemapSkybox;
 
     //Options
     unsigned int mMaxShadowIterationsLocation;

@@ -21,6 +21,7 @@
 
 #include "Texture.h"
 #include "Framebuffer.h"
+#include "Cubemap.h"
 
 using namespace sdflib;
 
@@ -150,6 +151,20 @@ public:
             mLightRenderer->callDrawGui = false;
             mLightRenderer->systemName = "Light Plane";
             addSystem(mLightRenderer);
+        }
+
+        // Skybox
+        {
+            mSkybox = std::make_shared<Cubemap>(Cubemap::Components{
+                .right = "../models/skybox/right.jpg",
+                .left = "../models/skybox/left.jpg",
+                .top = "../models/skybox/top.jpg",
+                .bottom = "../models/skybox/bottom.jpg",
+                .front = "../models/skybox/front.jpg",
+                .back = "../models/skybox/back.jpg",
+            }, false);
+
+            mOctreeGIShader->setCubemapSkybox(mSkybox);
         }
 
         // Create camera
@@ -309,6 +324,7 @@ public:
         mOctreeGIShader->setMaxRaycastIterations(mMaxRaycastIterations);
         mOctreeGIShader->setUseDirectSphereSampling(mUseDirectSphereSampling);
         mOctreeGIShader->setFrameIndex(mAccumulationFrame);
+        mOctreeGIShader->setUseCubemapSkybox(mUseCubemapSkybox);
         mOctreeGIShader->setSkyboxColor(mSkyboxColor);
 
         mModelRenderer->draw(getMainCamera());
@@ -454,6 +470,7 @@ public:
             ImGui::InputInt("Max Raycast Iterations", &mMaxRaycastIterations);
             ImGui::Checkbox("Use Direct Sphere Sampling", &mUseDirectSphereSampling);
 
+            ImGui::Checkbox("Use Cubemap Skybox", &mUseCubemapSkybox);
             ImGui::ColorEdit3("Skybox color", reinterpret_cast<float *>(&mSkyboxColor[0]));
 
             if (ImGui::Button("Export scene"))
@@ -639,7 +656,9 @@ private:
     std::shared_ptr<Texture> mResultTexture;
 
     // Skybox
+    bool mUseCubemapSkybox = false;
     glm::vec3 mSkyboxColor{0.0f};
+    std::shared_ptr<Cubemap> mSkybox;
 
     std::unique_ptr<RenderMesh> mScreenPlane;
 

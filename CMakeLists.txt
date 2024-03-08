@@ -171,6 +171,7 @@ if(SDFLIB_BUILD_APPS)
         src/tools/SdfGI/MitsubaExporter.cpp
         src/tools/SdfGI/Texture.cpp
         src/tools/SdfGI/Framebuffer.cpp
+        src/tools/SdfGI/Cubemap.cpp
         src/tools/SdfGI/SceneOctree.cpp
 
         ${RENDER_ENGINE_SOURCE_FILES} ${RENDER_ENGINE_HEADER_FILES}

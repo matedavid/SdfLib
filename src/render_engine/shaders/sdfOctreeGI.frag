@@ -30,7 +30,9 @@ uniform bool useDirectSphereSampling;
 uniform int frameIndex;
 
 // GI Skybox
+uniform bool useCubemapSkybox;
 uniform vec3 skyboxColor;
+uniform samplerCube cubemapSkybox;
 
 //Options 
 uniform int maxShadowIterations;
@@ -613,6 +615,18 @@ vec3 getDirectLighting(vec3 pos, vec3 N, vec3 V, uint seed, out float solidAngle
     }
 }
 
+vec3 getSkyboxColor(vec3 direction)
+{
+    if (useCubemapSkybox) 
+    {
+        return texture(cubemapSkybox, direction).rgb;
+    } 
+    else  
+    {
+        return skyboxColor;
+    }
+}
+
 #define indirectLightRec(name, name0)                                              \
 vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                          \
 {                                                                                  \
@@ -655,7 +669,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         }                                                                          \
         else                                                                       \
         {                                                                          \
-            indirectLight += skyboxColor;                                          \
+            indirectLight += getSkyboxColor(direction);                            \
         }                                                                          \
     }                                                                              \
                                                                                    \
