@@ -485,6 +485,57 @@ void main()
 }
 */
 
+uint OCTREENODE_LEAF_MASK = 0x80000000;
+uint OCTREENODE_CHILDREN_MASK = 0x7FFFFFFF;
+
+struct OctreeNode 
+{
+    uint value;
+
+    vec3 bboxMin;
+    vec3 bboxMax;
+
+    vec4 color;
+};
+
+layout(std140, binding = 4) buffer sceneOctree
+{
+    OctreeNode data[];
+};
+
+
+vec3 getSceneOctreeColor(vec3 point)
+{
+    uint idx = 0;
+    if (point.x < data[idx].bboxMin.x || point.x > data[idx].bboxMax.x ||
+        point.y < data[idx].bboxMin.y || point.y > data[idx].bboxMax.y ||
+        point.z < data[idx].bboxMin.z || point.z > data[idx].bboxMax.z)
+    {
+        return vec3(0.0);
+    }
+
+    while (!bool(data[idx].value & OCTREENODE_LEAF_MASK))
+    {
+        uint childIdx = data[idx].value & OCTREENODE_CHILDREN_MASK;
+
+        for (int i = 0; i < 8; ++i) 
+        {
+            vec3 childBboxMin = data[childIdx + i].bboxMin;
+            vec3 childBboxMax = data[childIdx + i].bboxMax;
+
+            if (point.x >= childBboxMin.x && point.x <= childBboxMax.x &&
+                point.y >= childBboxMin.y && point.y <= childBboxMax.y &&
+                point.z >= childBboxMin.z && point.z <= childBboxMax.z)
+            {
+                idx = childIdx + i;
+                break;
+            }
+        }
+    }
+
+    return data[idx].color.rgb;
+}
+
 uint pcg_hash(uint seed)
 {
     uint state = seed * 747796405u + 2891336453u;
@@ -691,8 +742,9 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
     }                                                                              \
                                                                                    \
     indirectLight /= float(numSamples);                                            \
+    vec3 albedo = getSceneOctreeColor(pos);                                        \
                                                                                    \
-    return (directLight + indirectLight) * (matAlbedo / PI);                       \
+    return (directLight + indirectLight) * (albedo / PI);                       \
 }
 
 vec3 indirectLightDepth5(vec3 pos, vec3 N, vec3 V, int depth, uint seed) { float solidAngle; return getDirectLighting(pos, N, V, seed, solidAngle) * (matAlbedo/PI); }

@@ -10,11 +10,12 @@
 #include <algorithm>
 
 #include "tools/SdfGI/Cubemap.h"
+#include "tools/SdfGI/SceneOctree.h"
 
 class SdfOctreeGIShader : public Shader<SdfOctreeGIShader>
 {
 public:
-    SdfOctreeGIShader(sdflib::IOctreeSdf& octreeSdf) : 
+    SdfOctreeGIShader(sdflib::IOctreeSdf& octreeSdf, SceneOctree& sceneOctree) : 
         Shader(SHADER_PATH + "sdfOctreeGI.vert", "", SHADER_PATH + "sdfOctreeGI.frag", getFragmentShaderHeader(octreeSdf))
     {
         unsigned int mRenderProgramId = getProgramId();
@@ -73,6 +74,13 @@ public:
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, mOctreeSSBO);
         glBufferData(GL_SHADER_STORAGE_BUFFER, octreeSdf.getOctreeData().size() * sizeof(sdflib::OctreeSdf::OctreeNode), octreeSdf.getOctreeData().data(), GL_STATIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, mOctreeSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        // Set scene octree data
+        glGenBuffers(1, &mSceneOctreeSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, mSceneOctreeSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sceneOctree.getShaderOctreeData().size() * sizeof(ShaderOctreeNode), sceneOctree.getShaderOctreeData().data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, mSceneOctreeSSBO);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
@@ -161,6 +169,8 @@ public:
     void bind() override
     {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, mOctreeSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, mSceneOctreeSSBO);
+
         glUniformMatrix4fv(worldToStartGridMatrixLocation, 1, GL_FALSE, glm::value_ptr(worldToStartGridMatrix));
         glUniformMatrix3fv(normalWorldToStartGridMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalWorldToStartGridMatrix));
         glUniform3f(startGridSizeLocation, startGridSize.x, startGridSize.y, startGridSize.z);
@@ -182,7 +192,7 @@ public:
         glUniform1f(mUseCubemapSkyboxLocation, mUseCubemapSkybox);
         glUniform3f(mSkyboxColorLocation, mSkyboxColor.r, mSkyboxColor.g, mSkyboxColor.b);
 
-        if (mUseCubemapSkybox && mCubemapSkybox != nullptr)
+        if (mCubemapSkybox != nullptr)
         {
             glUniform1f(mCubemapSkyboxLocation, 0);
             mCubemapSkybox->bind(0);
@@ -257,6 +267,8 @@ private:
 
     unsigned int mCubemapSkyboxLocation;
     std::shared_ptr<Cubemap> mCubemapSkybox;
+
+    unsigned int mSceneOctreeSSBO;
 
     //Options
     unsigned int mMaxShadowIterationsLocation;

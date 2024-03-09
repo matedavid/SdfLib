@@ -3,6 +3,7 @@
 #include <numeric>
 #include <iostream>
 #include <stack>
+#include <queue>
 
 SceneOctree::SceneOctree(const sdflib::Mesh &mesh, int maxDepth)
 {
@@ -44,6 +45,41 @@ SceneOctree::SceneOctree(const sdflib::Mesh &mesh, int maxDepth)
     });
 
     renderNode(mRoot, mesh);
+
+    // Create ShaderOctreeNode array
+    std::queue<OctreeNode *> queue;
+    queue.push(mRoot.get());
+
+    while (!queue.empty())
+    {
+        auto* node = queue.front();
+        queue.pop();
+
+        auto shaderNode = ShaderOctreeNode{};
+        shaderNode.min = node->center - glm::vec3(node->halfSize);
+        shaderNode.max = node->center + glm::vec3(node->halfSize);
+
+        if (node->type == OctreeNode::Type::Black)
+        {
+            shaderNode.setIsLeaf();
+            shaderNode.color = glm::vec4(node->color, 1.0f);
+        }
+        else if (node->type == OctreeNode::Type::Gray)
+        {
+            shaderNode.setIndex(mShaderOctreeData.size()*8 + 1);
+            for (size_t i = 0; i < 8; ++i)
+            {
+                queue.push(node->children[i].get());
+            }
+        }
+        else
+        {
+            shaderNode.setIsLeaf();
+            shaderNode.color = glm::vec4(0.0f);
+        }
+
+        mShaderOctreeData.push_back(shaderNode);
+    }
 }
 
 void SceneOctree::renderNode(std::unique_ptr<OctreeNode> &node, const sdflib::Mesh &mesh)
@@ -55,7 +91,8 @@ void SceneOctree::renderNode(std::unique_ptr<OctreeNode> &node, const sdflib::Me
         // Set node color
         {
             node->color = glm::vec3{0.0f};
-            for (const auto &ti : node->triangles) {
+            for (const auto &ti : node->triangles)
+            {
                 node->color += mesh.getColorPerTriangle()[ti];
             }
             node->color /= static_cast<float>(node->triangles.size());
@@ -156,28 +193,5 @@ void SceneOctree::slowTriangleIntersectionTest(sdflib::BoundingBox bbox, const s
     {
         if (triangle_intersects(triangle, bbox))
             outTriangles.push_back(triangle);
-    }
-}
-
-void SceneOctree::print()
-{
-    std::stack<OctreeNode *> stack;
-    stack.push(mRoot.get());
-
-    while (!stack.empty())
-    {
-        auto &node = stack.top();
-        stack.pop();
-
-        if (node->type == OctreeNode::Type::Black)
-            std::cout << "Node: " << node->triangles.size() << " triangles, depth: " << node->depth << std::endl;
-
-        for (const auto &child : node->children)
-        {
-            if (node->type == OctreeNode::Type::Gray)
-            {
-                stack.push(child.get());
-            }
-        }
     }
 }

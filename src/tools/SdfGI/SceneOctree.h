@@ -33,14 +33,43 @@ struct OctreeNode
     std::array<std::unique_ptr<OctreeNode>, 8> children;
 };
 
+static uint32_t LEAF_MASK = 0x80000000;
+static uint32_t INDEX_MASK = 0x7FFFFFFF;
+
+struct ShaderOctreeNode
+{
+    // 1 bit: isLeaf
+    // 31 bits: index to pos in array where children are 
+    uint32_t value = 0;
+
+    float _padding1[3];
+
+    glm::vec3 min;
+    float _padding2;
+    glm::vec3 max;
+    float _padding3;
+
+    glm::vec4 color{};
+
+    void setIsLeaf() 
+    {
+        value = value | LEAF_MASK;
+    }
+
+    void setIndex(uint32_t index)
+    {
+        value = (value & LEAF_MASK) | (index & INDEX_MASK);
+    }
+};
+
 class SceneOctree
 {
 public:
     SceneOctree(const sdflib::Mesh &mesh, int maxDepth);
     ~SceneOctree() = default;
 
-    void print();
     const std::unique_ptr<OctreeNode> &getRoot() { return mRoot; } 
+    const std::vector<ShaderOctreeNode> &getShaderOctreeData() { return mShaderOctreeData; }
 
 private:
     struct RenderConfig
@@ -50,6 +79,7 @@ private:
     RenderConfig mRenderConfig;
 
     std::unique_ptr<OctreeNode> mRoot;
+    std::vector<ShaderOctreeNode> mShaderOctreeData;
 
     std::vector<Triangle> mTriangles;
     std::vector<glm::vec3> mVertices;

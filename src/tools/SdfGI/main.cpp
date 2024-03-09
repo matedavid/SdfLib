@@ -34,7 +34,8 @@ public:
     {
         Window::getCurrentWindow().setBackgroudColor(glm::vec4(0.9, 0.9, 0.9, 1.0));
 
-        const auto &[windowWidth, windowHeight] = [&]() {
+        const auto &[windowWidth, windowHeight] = [&]()
+        {
             const auto size = Window::getCurrentWindow().getWindowSize();
             return std::make_pair(size.x, size.y);
         }();
@@ -75,7 +76,11 @@ public:
             exit(1);
         }
 
-        mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf);
+        // Load Scene octree
+        auto *sceneOctree = new SceneOctree(mesh, 3);
+        mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf, *sceneOctree);
+
+        spdlog::info("Scene octree generated");
 
         // Model Render
         {
@@ -156,13 +161,14 @@ public:
         // Skybox
         {
             mSkybox = std::make_shared<Cubemap>(Cubemap::Components{
-                .right = "../models/skybox/right.jpg",
-                .left = "../models/skybox/left.jpg",
-                .top = "../models/skybox/top.jpg",
-                .bottom = "../models/skybox/bottom.jpg",
-                .front = "../models/skybox/front.jpg",
-                .back = "../models/skybox/back.jpg",
-            }, false);
+                                                    .right = "../models/skybox/right.jpg",
+                                                    .left = "../models/skybox/left.jpg",
+                                                    .top = "../models/skybox/top.jpg",
+                                                    .bottom = "../models/skybox/bottom.jpg",
+                                                    .front = "../models/skybox/front.jpg",
+                                                    .back = "../models/skybox/back.jpg",
+                                                },
+                                                false);
 
             mOctreeGIShader->setCubemapSkybox(mSkybox);
         }
