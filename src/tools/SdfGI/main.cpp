@@ -77,7 +77,7 @@ public:
         }
 
         // Load Scene octree
-        auto *sceneOctree = new SceneOctree(mesh, 3);
+        auto *sceneOctree = new SceneOctree(mesh, 8);
         mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf, *sceneOctree);
 
         spdlog::info("Scene octree generated");
