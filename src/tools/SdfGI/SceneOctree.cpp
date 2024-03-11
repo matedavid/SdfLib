@@ -47,39 +47,31 @@ SceneOctree::SceneOctree(const sdflib::Mesh &mesh, int maxDepth)
     renderNode(mRoot, mesh);
 
     // Create ShaderOctreeNode array
-    std::queue<OctreeNode *> queue;
-    queue.push(mRoot.get());
+    const uint32_t rootIdx = generateShaderOctreeData(mRoot);
+    assert(rootIdx == 0);
 
-    while (!queue.empty())
+    // Check shader octree is correct
+    /*
     {
-        auto* node = queue.front();
-        queue.pop();
-
-        auto shaderNode = ShaderOctreeNode{};
-        shaderNode.min = node->center - glm::vec3(node->halfSize);
-        shaderNode.max = node->center + glm::vec3(node->halfSize);
-
-        if (node->type == OctreeNode::Type::Black)
+        for (size_t i = 0; i < mShaderOctreeData.size(); ++i)
         {
-            shaderNode.setIsLeaf();
-            shaderNode.color = glm::vec4(node->color, 1.0f);
-        }
-        else if (node->type == OctreeNode::Type::Gray)
-        {
-            shaderNode.setIndex(mShaderOctreeData.size()*8 + 1);
-            for (size_t i = 0; i < 8; ++i)
+            auto node = mShaderOctreeData[i];
+
+            if (bool(node.isLeaf))
             {
-                queue.push(node->children[i].get());
+                std::cout << "node idx: " << i << " is leaf\n";
+                continue;
+            }
+
+            for (size_t j = 0; j < 8; ++j)
+            {
+                auto child = mShaderOctreeData[node.childrenIndices[j]];
+                std::cout << "node idx: " << i << " child: " << node.childrenIndices[j] << " with index: " << node.childrenIndices[j] << "\n";
+                assert(node.ref->children[j].get() == child.ref);
             }
         }
-        else
-        {
-            shaderNode.setIsLeaf();
-            shaderNode.color = glm::vec4(0.0f);
-        }
-
-        mShaderOctreeData.push_back(shaderNode);
     }
+    */
 }
 
 void SceneOctree::renderNode(std::unique_ptr<OctreeNode> &node, const sdflib::Mesh &mesh)
@@ -194,4 +186,37 @@ void SceneOctree::slowTriangleIntersectionTest(sdflib::BoundingBox bbox, const s
         if (triangle_intersects(triangle, bbox))
             outTriangles.push_back(triangle);
     }
+}
+
+uint32_t SceneOctree::generateShaderOctreeData(const std::unique_ptr<OctreeNode> &node)
+{
+    ShaderOctreeNode shaderNode;
+    shaderNode.min = node->center - glm::vec3(node->halfSize);
+    shaderNode.max = node->center + glm::vec3(node->halfSize);
+    // shaderNode.ref = node.get();
+
+    if (node->type == OctreeNode::Type::Black)
+    {
+        shaderNode.setIsLeaf();
+        shaderNode.color = glm::vec4(node->color, 1.0f);
+    }
+    else if (node->type == OctreeNode::Type::White)
+    {
+        shaderNode.setIsLeaf();
+        shaderNode.color = glm::vec4(0.0f);
+    }
+
+    const uint32_t nodeIdx = mShaderOctreeData.size();
+    mShaderOctreeData.push_back(shaderNode);
+
+    if (shaderNode.isLeaf)
+        return nodeIdx;
+
+    for (size_t i = 0; i < 8; ++i)
+    {
+        const uint32_t childIdx = generateShaderOctreeData(node->children[i]);
+        mShaderOctreeData[nodeIdx].childrenIndices[i].x = childIdx;
+    }
+
+    return nodeIdx;
 }

@@ -63,6 +63,7 @@ uniform bool simple;
 in vec3 gridPosition;
 in vec3 gridNormal;
 in vec3 cameraPos;
+in mat4 inverseWorldToStartGridMatrix;
 
 out vec4 fragColor;
 
@@ -485,12 +486,13 @@ void main()
 }
 */
 
-uint OCTREENODE_LEAF_MASK = 0x80000000;
-uint OCTREENODE_CHILDREN_MASK = 0x7FFFFFFF;
+// uint OCTREENODE_LEAF_MASK = 0x80000000;
+// uint OCTREENODE_CHILDREN_MASK = 0x7FFFFFFF;
 
 struct OctreeNode 
 {
-    uint value;
+    uint isLeaf;
+    uint childrenIndices[8];
 
     vec3 bboxMin;
     vec3 bboxMax;
@@ -498,42 +500,52 @@ struct OctreeNode
     vec4 color;
 };
 
-layout(std140, binding = 4) buffer sceneOctree
+layout(std140, binding = 4) buffer SceneOctree 
 {
-    OctreeNode data[];
+    OctreeNode sceneData[];
 };
 
-
-vec3 getSceneOctreeColor(vec3 point)
+vec3 getSceneOctreeColor(vec3 gridPoint)
 {
+    vec3 point = (inverseWorldToStartGridMatrix * vec4(gridPoint, 1.0)).xyz;
+
     uint idx = 0;
-    if (point.x < data[idx].bboxMin.x || point.x > data[idx].bboxMax.x ||
-        point.y < data[idx].bboxMin.y || point.y > data[idx].bboxMax.y ||
-        point.z < data[idx].bboxMin.z || point.z > data[idx].bboxMax.z)
+    if (point.x < sceneData[idx].bboxMin.x || point.x > sceneData[idx].bboxMax.x ||
+        point.y < sceneData[idx].bboxMin.y || point.y > sceneData[idx].bboxMax.y ||
+        point.z < sceneData[idx].bboxMin.z || point.z > sceneData[idx].bboxMax.z)
     {
         return vec3(0.0);
     }
 
-    while (!bool(data[idx].value & OCTREENODE_LEAF_MASK))
+    while (!bool(sceneData[idx].isLeaf))
     {
-        uint childIdx = data[idx].value & OCTREENODE_CHILDREN_MASK;
+        uint prevIdx = idx;
+        OctreeNode node = sceneData[idx];
 
         for (int i = 0; i < 8; ++i) 
         {
-            vec3 childBboxMin = data[childIdx + i].bboxMin;
-            vec3 childBboxMax = data[childIdx + i].bboxMax;
+            uint childIdx = node.childrenIndices[i];
+
+            vec3 childBboxMin = sceneData[childIdx].bboxMin;
+            vec3 childBboxMax = sceneData[childIdx].bboxMax;
 
             if (point.x >= childBboxMin.x && point.x <= childBboxMax.x &&
                 point.y >= childBboxMin.y && point.y <= childBboxMax.y &&
                 point.z >= childBboxMin.z && point.z <= childBboxMax.z)
             {
-                idx = childIdx + i;
+                idx = childIdx;
                 break;
             }
         }
+
+        if (prevIdx == idx)
+        {
+            // Should not happen
+            return vec3(0.0, 0.0, 0.0);
+        }
     }
 
-    return data[idx].color.rgb;
+    return sceneData[idx].color.rgb;
 }
 
 uint pcg_hash(uint seed)
@@ -744,7 +756,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
     indirectLight /= float(numSamples);                                            \
     vec3 albedo = getSceneOctreeColor(pos);                                        \
                                                                                    \
-    return (directLight + indirectLight) * (albedo / PI);                       \
+    return (directLight + indirectLight) * (albedo / PI);                          \
 }
 
 vec3 indirectLightDepth5(vec3 pos, vec3 N, vec3 V, int depth, uint seed) { float solidAngle; return getDirectLighting(pos, N, V, seed, solidAngle) * (matAlbedo/PI); }
@@ -759,6 +771,10 @@ void main()
     if (simple) {
         return;
     }
+
+    vec3 cc = getSceneOctreeColor(gridPosition);
+    fragColor = vec4(cc, 1.0);
+    return;
 
     uint seed = pcg_hash(pcg_hash(uint(gl_FragCoord.x)) + pcg_hash(uint(gl_FragCoord.y)) + pcg_hash(uint(time + frameIndex)));
 

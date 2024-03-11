@@ -33,32 +33,20 @@ struct OctreeNode
     std::array<std::unique_ptr<OctreeNode>, 8> children;
 };
 
-static uint32_t LEAF_MASK = 0x80000000;
-static uint32_t INDEX_MASK = 0x7FFFFFFF;
-
 struct ShaderOctreeNode
 {
-    // 1 bit: isLeaf
-    // 31 bits: index to pos in array where children are 
-    uint32_t value = 0;
+    uint32_t isLeaf = 0; float _padding1[3];
+    glm::uvec4 childrenIndices[8];
 
-    float _padding1[3];
-
-    glm::vec3 min;
-    float _padding2;
-    glm::vec3 max;
-    float _padding3;
+    // Bbox
+    glm::vec3 min; float _padding2;
+    glm::vec3 max; float _padding3;
 
     glm::vec4 color{};
 
-    void setIsLeaf() 
+    void setIsLeaf()
     {
-        value = value | LEAF_MASK;
-    }
-
-    void setIndex(uint32_t index)
-    {
-        value = (value & LEAF_MASK) | (index & INDEX_MASK);
+        isLeaf = 1;
     }
 };
 
@@ -68,7 +56,7 @@ public:
     SceneOctree(const sdflib::Mesh &mesh, int maxDepth);
     ~SceneOctree() = default;
 
-    const std::unique_ptr<OctreeNode> &getRoot() { return mRoot; } 
+    const std::unique_ptr<OctreeNode> &getRoot() { return mRoot; }
     const std::vector<ShaderOctreeNode> &getShaderOctreeData() { return mShaderOctreeData; }
 
 private:
@@ -84,6 +72,8 @@ private:
     std::vector<Triangle> mTriangles;
     std::vector<glm::vec3> mVertices;
 
-    void renderNode(std::unique_ptr<OctreeNode> &node, const sdflib::Mesh& mesh);
+    void renderNode(std::unique_ptr<OctreeNode> &node, const sdflib::Mesh &mesh);
     void slowTriangleIntersectionTest(sdflib::BoundingBox bbox, const std::vector<size_t> &triangles, std::vector<size_t> &outTriangles);
+
+    uint32_t generateShaderOctreeData(const std::unique_ptr<OctreeNode> &node);
 };
