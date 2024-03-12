@@ -77,13 +77,11 @@ public:
 
     void draw() override
     {
-        auto loc = glGetUniformLocation(mShader->getProgramId(), "color");
-
         for (const auto &node : mCubes)
         {
-            glUniform3f(loc, node->color.r, node->color.g, node->color.b);
+            mShader->setColor(node->color);
 
-            const auto size = node->halfSize* 2.0f;
+            const auto size = node->halfSize * 2.0f;
 
             auto transform = glm::mat4(1.0f);
             transform = glm::translate(transform, node->center);
@@ -96,7 +94,7 @@ public:
 
 private:
     std::shared_ptr<SceneOctree> mOctree;
-    std::vector<OctreeNode*> mCubes;
+    std::vector<OctreeNode *> mCubes;
 
     std::shared_ptr<NavigationCamera> mCamera;
     std::shared_ptr<RenderMesh> mCubeRenderer;
@@ -130,8 +128,9 @@ int main(int argc, char **argv)
         mesh.applyTransform(glm::scale(glm::mat4(1.0), glm::vec3(2.0f / glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z))) *
                             glm::translate(glm::mat4(1.0), -mesh.getBoundingBox().getCenter()));
     }
+    mesh.computeBoundingBox();
 
-    auto scene = std::make_shared<SceneOctree>(mesh, 8);
+    auto scene = std::make_shared<SceneOctree>(mesh, 6);
     OctreeViewer viewer(scene);
 
     MainLoop loop;

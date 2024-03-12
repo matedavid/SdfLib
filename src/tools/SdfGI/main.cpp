@@ -18,6 +18,7 @@
 #include "render_engine/shaders/GIAccumulationShader.h"
 #include "render_engine/shaders/GIScreenPresentShader.h"
 #include "render_engine/shaders/ScreenPlaneShader.h"
+#include "render_engine/shaders/ColorsShader.h"
 
 #include "Texture.h"
 #include "Framebuffer.h"
@@ -151,7 +152,9 @@ public:
 
             mLightRenderer->setIndexData(cube->getIndices());
 
-            mLightRenderer->setShader(mOctreeGIShader.get());
+            mFlatColorShader = std::make_unique<ColorsShader>();
+
+            mLightRenderer->setShader(mFlatColorShader.get());
             mLightRenderer->callDraw = false; // Disable the automatic call because we already call the function
             mLightRenderer->callDrawGui = false;
             mLightRenderer->systemName = "Light Plane";
@@ -347,6 +350,19 @@ public:
 
             mOctreeGIShader->setSimple(true);
 
+            // Lights
+            mFlatColorShader->setColor(glm::vec3(0.0f));
+            for (int i = 0; i < mLightNumber; i++)
+            {
+                auto transform = glm::mat4(1.0f);
+                transform = glm::translate(transform, mLightPosition[i]);
+                transform = glm::scale(transform, glm::vec3(mLightRadius[i]));
+
+                mLightRenderer->setTransform(transform);
+                mLightRenderer->draw(getMainCamera());
+            }
+
+            // Model
             drawModel();
 
             mDepthFramebuffer->unbind();
@@ -372,19 +388,16 @@ public:
 
                 auto transform = glm::mat4(1.0f);
                 transform = glm::translate(transform, mLightPosition[i]);
-                transform = glm::scale(transform, glm::vec3(0.10f));
+                transform = glm::scale(transform, glm::vec3(mLightRadius[i]));
+
+                mFlatColorShader->setColor(mLightColor[i]);
 
                 mLightRenderer->setTransform(transform);
-                mOctreeGIShader->setMaterial(mLightColor[i], 0.1, 0.1, glm::vec3(0.04));
-
                 mLightRenderer->draw(getMainCamera());
             }
 
+            // Model
             drawModel();
-
-            // Plane
-            // mOctreeGIShader->setMaterial(glm::vec3(0.7), 0.1, 0.1, glm::vec3(0.07));
-            // mPlaneRenderer->draw(getMainCamera());
 
             glDepthFunc(GL_LESS);
             mColorFramebuffer->unbind();
@@ -641,6 +654,8 @@ private:
     std::shared_ptr<RenderMesh> mModelRenderer;
     std::shared_ptr<RenderMesh> mPlaneRenderer;
     std::shared_ptr<RenderMesh> mLightRenderer;
+
+    std::unique_ptr<ColorsShader> mFlatColorShader;
 
     // Depth pass
     std::shared_ptr<Texture> mDepthTexture;
