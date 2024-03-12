@@ -63,7 +63,8 @@ uniform bool simple;
 in vec3 gridPosition;
 in vec3 gridNormal;
 in vec3 cameraPos;
-in mat4 inverseWorldToStartGridMatrix;
+in mat4 fragWorldToStartGridMatrix;
+in mat4 fragInverseWorldToStartGridMatrix;
 
 out vec4 fragColor;
 
@@ -507,7 +508,7 @@ layout(std140, binding = 4) buffer SceneOctree
 
 vec3 getSceneOctreeColor(vec3 gridPoint)
 {
-    vec3 point = (inverseWorldToStartGridMatrix * vec4(gridPoint, 1.0)).xyz;
+    vec3 point = (fragInverseWorldToStartGridMatrix * vec4(gridPoint, 1.0)).xyz;
 
     uint idx = 0;
     if (point.x < sceneData[idx].bboxMin.x || point.x > sceneData[idx].bboxMax.x ||
@@ -627,10 +628,12 @@ vec3 getColor(vec3 pos, vec3 N, vec3 V)
     vec3 color = vec3(0.0);
     for (int i = 0; i < lightNumber; ++i)
     {
+        vec3 lightPosition = (fragWorldToStartGridMatrix * vec4(lightPos[i], 1.0f)).xyz;
+
         vec3 colorLight = lightIntensity[i] * lightColor[i];
 
-        float distToLight = length(lightPos[i] - pos);
-        vec3 L = normalize(lightPos[i] - pos);
+        float distToLight = length(lightPosition - pos);
+        vec3 L = normalize(lightPosition - pos);
 
         float coneAngle = atan(lightRadius[i]/distToLight);
         float solidAngle = PI * sin(coneAngle) * pow((lightRadius[i]/distToLight), 2.0);
@@ -650,15 +653,17 @@ vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle
 
     uint seedLocal = seed;
 
-    float distToLight = distance(lightPos[0], pos);
+    vec3 lightPosition = (fragWorldToStartGridMatrix * vec4(lightPos[0], 1.0f)).xyz;
+
+    float distToLight = distance(lightPosition, pos);
     vec3 colorLight = lightIntensity[0] * lightColor[0];
 
     float cosAngle = lightRadius[0] / distToLight;
     solidAngle = 2.0 * PI * (1.0 - cosAngle);
 
-    vec2 rangeX = vec2(lightPos[0].x - lightRadius[0], lightPos[0].x + lightRadius[0]);
-    vec2 rangeY = vec2(lightPos[0].y - lightRadius[0], lightPos[0].y + lightRadius[0]);
-    vec2 rangeZ = vec2(lightPos[0].z - lightRadius[0], lightPos[0].z + lightRadius[0]);
+    vec2 rangeX = vec2(lightPosition.x - lightRadius[0], lightPosition.x + lightRadius[0]);
+    vec2 rangeY = vec2(lightPosition.y - lightRadius[0], lightPosition.y + lightRadius[0]);
+    vec2 rangeZ = vec2(lightPosition.z - lightRadius[0], lightPosition.z + lightRadius[0]);
     
     // float pdf = solidAngle / (4.0 * PI * distToLight * distToLight);
 
@@ -709,9 +714,11 @@ vec3 getSkyboxColor(vec3 direction)
 #define indirectLightRec(name, name0)                                              \
 vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                          \
 {                                                                                  \
+    vec3 albedo = getSceneOctreeColor(pos);                                        \
+                                                                                   \
     float solidAngle;                                                              \
     vec3 directLight = getDirectLighting(pos, N, V, seed, solidAngle);             \
-    if (depth == 0) return directLight * (matAlbedo/PI);                           \
+    if (depth == 0) return directLight * (albedo/PI);                              \
                                                                                    \
     vec3 indirectLight = vec3(0.0);                                                \
     for (int i = 0; i < numSamples; ++i)                                           \
@@ -752,9 +759,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
                 * max(dot(N, direction), 0.0) / pdf;                               \
         }                                                                          \
     }                                                                              \
-                                                                                   \
     indirectLight /= float(numSamples);                                            \
-    vec3 albedo = getSceneOctreeColor(pos);                                        \
                                                                                    \
     return (directLight + indirectLight) * (albedo / PI);                          \
 }
@@ -772,10 +777,6 @@ void main()
         return;
     }
 
-    vec3 cc = getSceneOctreeColor(gridPosition);
-    fragColor = vec4(cc, 1.0);
-    return;
-
     uint seed = pcg_hash(pcg_hash(uint(gl_FragCoord.x)) + pcg_hash(uint(gl_FragCoord.y)) + pcg_hash(uint(time + frameIndex)));
 
     vec3 N = normalize(gridNormal);
@@ -784,8 +785,10 @@ void main()
     vec3 color = vec3(0.0);
     if (!useIndirect) 
     {
+        vec3 albedo = getSceneOctreeColor(gridPosition);
+
         float solidAngle;
-        color = getDirectLighting(gridPosition, N, V, seed, solidAngle) * (matAlbedo / PI);
+        color = getDirectLighting(gridPosition, N, V, seed, solidAngle) * (albedo / PI);
     } 
     else
     {
