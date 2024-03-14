@@ -711,6 +711,27 @@ vec3 getSkyboxColor(vec3 direction)
     }
 }
 
+vec3 getRandomDirection(vec3 N, uint seed, out uint outSeed, out float pdf)
+{
+    float r1 = randomFloatRange(-1, 1, seed, outSeed);
+    float r2 = randomFloatRange(-1, 1, seed, outSeed);
+    float r3 = randomFloatRange(-1, 1, seed, outSeed);
+
+    vec3 rand = vec3(r1, r2, r3);
+
+    // vec3 dir = randomHemispherePoint(rand, N);
+    // dir = normalize(dir);
+
+    // pdf = 1.0 / (2.0 * PI);
+
+    vec3 dir = randomCosineWeightedHemispherePoint(rand, N);
+    dir = normalize(dir);
+
+    pdf = max(dot(N, dir) / PI, 0.0);
+
+    return dir;
+}
+
 #define indirectLightRec(name, name0)                                              \
 vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                          \
 {                                                                                  \
@@ -725,14 +746,8 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
     {                                                                              \
         seed += uint(i) + uint(depth);                                             \
                                                                                    \
-        float r1 = randomFloatRange(-1, 1, seed, seed);                            \
-        float r2 = randomFloatRange(-1, 1, seed, seed);                            \
-        float r3 = randomFloatRange(-1, 1, seed, seed);                            \
-                                                                                   \
-        vec3 direction = randomHemispherePoint(vec3(r1, r2, r3), N);               \
-        direction = normalize(direction);                                          \
-                                                                                   \
-        float pdf = 1.0 / (2.0 * PI);                                              \
+        float pdf;                                                                 \
+        vec3 direction = getRandomDirection(N, seed, seed, pdf);                   \
                                                                                    \
         vec3 hitPosition;                                                          \
         bool hit = raycast(pos + epsilon * N, direction, hitPosition);             \

@@ -81,7 +81,10 @@ public:
         auto *sceneOctree = new SceneOctree(mesh, 8);
         mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf, *sceneOctree);
 
-        spdlog::info("Scene octree generated");
+        {
+            const auto dataSize = sceneOctree->getShaderOctreeData().size() * sizeof(ShaderOctreeNode) * 1e-6;
+            spdlog::info("Finished generating Scene Octree, with size {0:.2f} MB", dataSize);
+        }
 
         // Model Render
         {
