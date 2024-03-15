@@ -719,15 +719,15 @@ vec3 getRandomDirection(vec3 N, uint seed, out uint outSeed, out float pdf)
 
     vec3 rand = vec3(r1, r2, r3);
 
-    // vec3 dir = randomHemispherePoint(rand, N);
-    // dir = normalize(dir);
-
-    // pdf = 1.0 / (2.0 * PI);
-
-    vec3 dir = randomCosineWeightedHemispherePoint(rand, N);
+    vec3 dir = randomHemispherePoint(rand, N);
     dir = normalize(dir);
 
-    pdf = max(dot(N, dir) / PI, 0.0);
+    pdf = 1.0 / (2.0 * PI);
+
+    // vec3 dir = randomCosineWeightedHemispherePoint(rand, N);
+    // dir = normalize(dir);
+
+    // pdf = max(dot(N, dir) / PI, 0.0);
 
     return dir;
 }
