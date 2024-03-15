@@ -713,11 +713,15 @@ vec3 getSkyboxColor(vec3 direction)
 
 vec3 getRandomDirection(vec3 N, uint seed, out uint outSeed, out float pdf)
 {
-    float r1 = randomFloatRange(-1, 1, seed, outSeed);
-    float r2 = randomFloatRange(-1, 1, seed, outSeed);
-    float r3 = randomFloatRange(-1, 1, seed, outSeed);
+    uint localSeed = seed;
+
+    float r1 = randomFloatRange(-1, 1, localSeed, localSeed);
+    float r2 = randomFloatRange(-1, 1, localSeed, localSeed);
+    float r3 = randomFloatRange(-1, 1, localSeed, localSeed);
 
     vec3 rand = vec3(r1, r2, r3);
+
+    outSeed = localSeed;
 
     vec3 dir = randomHemispherePoint(rand, N);
     dir = normalize(dir);
