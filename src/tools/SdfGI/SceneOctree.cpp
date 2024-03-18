@@ -34,7 +34,8 @@ SceneOctree::SceneOctree(const sdflib::Mesh &mesh, int maxDepth)
     std::vector<size_t> triangleIndices(mTriangles.size());
     std::iota(triangleIndices.begin(), triangleIndices.end(), 0);
 
-    assert(mTriangles.size() == mesh.getColorPerTriangle().size());
+    // assert(mTriangles.size() == mesh.getColorPerTriangle().size());
+    assert(mTriangles.size() == mesh.getMaterialPerTriangle().size());
 
     mRoot = std::make_unique<OctreeNode>(OctreeNode{
         .center = center,
@@ -98,14 +99,23 @@ void SceneOctree::renderNode(std::unique_ptr<OctreeNode> &node, const sdflib::Me
     {
         node->type = OctreeNode::Type::Black;
 
-        // Set node color
+        // Set node material
         {
-            node->color = glm::vec3{0.0f};
+            node->material = sdflib::MaterialProperties{};
             for (const auto &ti : node->triangles)
             {
-                node->color += mesh.getColorPerTriangle()[ti];
+                const auto mat =  mesh.getMaterialPerTriangle()[ti];
+                node->material.albedo += mat.albedo;
+                node->material.roughness += mat.roughness;
+                node->material.metallic += mat.metallic;
+
             }
-            node->color /= static_cast<float>(node->triangles.size());
+
+            // node->color /= static_cast<float>(node->triangles.size());
+
+            node->material.albedo /= static_cast<float>(node->triangles.size());
+            node->material.roughness /= static_cast<float>(node->triangles.size());
+            node->material.metallic /= static_cast<float>(node->triangles.size());
         }
 
         return;
@@ -228,13 +238,18 @@ uint32_t SceneOctree::generateShaderOctreeData(const std::unique_ptr<OctreeNode>
 
         if (child->type == OctreeNode::Type::Black)
         {
+            const auto mat = child->material;
             mShaderOctreeData[nodeIdx+i].setIsLeaf();
-            mShaderOctreeData[nodeIdx+i].color = glm::vec4(child->color, 1.0f);
+
+            mShaderOctreeData[nodeIdx+i].color = glm::vec4(mat.albedo, 1.0f);
+            mShaderOctreeData[nodeIdx+i].materialProperties = glm::vec4(mat.roughness, mat.metallic, 0.0f, 0.0f);
         }
         else if (child->type == OctreeNode::Type::White)
         {
             mShaderOctreeData[nodeIdx+i].setIsLeaf();
+
             mShaderOctreeData[nodeIdx+i].color = glm::vec4(0.0f);
+            mShaderOctreeData[nodeIdx+i].materialProperties = glm::vec4(0.0f);
         }
         else if (child->type == OctreeNode::Type::Gray)
         {

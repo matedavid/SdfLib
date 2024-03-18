@@ -27,7 +27,8 @@ struct OctreeNode
     int depth;
     Type type;
 
-    glm::vec3 color{0.0f};
+    // glm::vec3 color{0.0f};
+    sdflib::MaterialProperties material;
 
     std::vector<size_t> triangles;
     std::array<std::unique_ptr<OctreeNode>, 8> children;
@@ -48,6 +49,8 @@ struct ShaderOctreeNode
     glm::vec3 max; float _padding3;
 
     glm::vec4 color{};
+    // roughness, metallic, -, -
+    glm::vec4 materialProperties{};
 
     void setIsLeaf()
     {

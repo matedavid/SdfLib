@@ -69,6 +69,13 @@ struct BoundingBox
     }
 };
 
+struct MaterialProperties
+{
+    glm::vec3 albedo{};
+    float roughness{0.5f};
+    float metallic{0.5f};
+};
+
 class Mesh
 {
 public:
@@ -89,8 +96,11 @@ public:
     std::vector<glm::vec3>& getNormals() { return mNormals; }
     const std::vector<glm::vec3>& getNormals() const { return mNormals; }
 
-    std::vector<glm::vec3>& getColorPerTriangle() { return mColorPerTriangle; }
-    const std::vector<glm::vec3>& getColorPerTriangle() const { return mColorPerTriangle; }
+    // std::vector<glm::vec3>& getColorPerTriangle() { return mColorPerTriangle; }
+    // const std::vector<glm::vec3>& getColorPerTriangle() const { return mColorPerTriangle; }
+
+    std::vector<MaterialProperties>& getMaterialPerTriangle() { return mMaterialPropertiesPerTriangle; }
+    const std::vector<MaterialProperties>& getMaterialPerTriangle() const { return mMaterialPropertiesPerTriangle; }
 
     const BoundingBox& getBoundingBox() const { return mBBox; }
 
@@ -106,7 +116,7 @@ private:
     std::vector<uint32_t> mIndices;
     std::vector<glm::vec3> mNormals;
 
-    std::vector<glm::vec3> mColorPerTriangle;
+    std::vector<MaterialProperties> mMaterialPropertiesPerTriangle;
 
     BoundingBox mBBox;
 };

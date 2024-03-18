@@ -55,24 +55,30 @@ Mesh::Mesh(std::string filePath)
 
         // material
         if (mesh->mMaterialIndex < 0) {
-            for (std::size_t f = 0; f < mesh->mNumFaces; ++f) 
-                mColorPerTriangle.push_back(glm::vec3(0.0f));
+            for (std::size_t f = 0; f < mesh->mNumFaces; ++f)
+                mMaterialPropertiesPerTriangle.push_back(MaterialProperties{});
 
             continue;
         }
 
         const auto material = scene->mMaterials[mesh->mMaterialIndex];
 
+        MaterialProperties props{};
+
         aiColor3D aiColor;
-        glm::vec3 color;
-        if (material->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor) == aiReturn_SUCCESS) {
-            color = glm::vec3(aiColor.r, aiColor.g, aiColor.b);
-        } else {
-            color = glm::vec3(0.0f);
-        }
+        if (material->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor) == aiReturn_SUCCESS)
+            props.albedo = glm::vec3(aiColor.r, aiColor.g, aiColor.b);
+
+        ai_real metallic;
+        if (material->Get(AI_MATKEY_METALLIC_FACTOR, metallic) == aiReturn_SUCCESS) 
+            props.metallic = metallic;
+
+        ai_real roughness;
+        if (material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == aiReturn_SUCCESS) 
+            props.roughness = roughness;
 
         for (std::size_t f = 0; f < mesh->mNumFaces; ++f) 
-            mColorPerTriangle.push_back(color);
+            mMaterialPropertiesPerTriangle.push_back(props);
     }
 
     // Calculate bounding box

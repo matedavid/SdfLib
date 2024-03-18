@@ -490,6 +490,13 @@ void main()
 uint OCTREENODE_LEAF_MASK = 0x80000000;
 uint OCTREENODE_CHILDREN_MASK = 0x7FFFFFFF;
 
+struct Material 
+{
+    vec3 albedo;
+    float roughness;
+    float metallic;
+};
+
 struct OctreeNode 
 {
     // 32 bits
@@ -501,6 +508,8 @@ struct OctreeNode
     vec3 bboxMax;
 
     vec4 color;
+    // roughness, metallic, -, -
+    vec4 material;
 };
 
 layout(std140, binding = 4) buffer SceneOctree 
@@ -508,7 +517,7 @@ layout(std140, binding = 4) buffer SceneOctree
     OctreeNode sceneData[];
 };
 
-vec3 getSceneOctreeColor(vec3 gridPoint)
+Material getSceneOctreeColor(vec3 gridPoint)
 {
     vec3 point = (fragInverseWorldToStartGridMatrix * vec4(gridPoint, 1.0)).xyz;
 
@@ -517,7 +526,12 @@ vec3 getSceneOctreeColor(vec3 gridPoint)
         point.y < sceneData[idx].bboxMin.y || point.y > sceneData[idx].bboxMax.y ||
         point.z < sceneData[idx].bboxMin.z || point.z > sceneData[idx].bboxMax.z)
     {
-        return vec3(0.0);
+        Material mat;
+        mat.albedo = vec3(0.0, 0.0, 0.0);
+        mat.roughness = 0.0;
+        mat.metallic = 0.0;
+
+        return mat; 
     }
 
     while (!bool(sceneData[idx].data & OCTREENODE_LEAF_MASK))
@@ -546,11 +560,17 @@ vec3 getSceneOctreeColor(vec3 gridPoint)
         if (prevIdx == idx)
         {
             // Should not happen
-            return vec3(0.0, 0.0, 0.0);
+            Material mat;
+            return mat;
         }
     }
+    
+    Material mat;
+    mat.albedo = sceneData[idx].color.rgb;
+    mat.roughness = sceneData[idx].material.x;
+    mat.metallic = sceneData[idx].material.y;
 
-    return sceneData[idx].color.rgb;
+    return mat;
 }
 
 uint pcg_hash(uint seed)
@@ -629,6 +649,50 @@ bool raycast(vec3 startPos, vec3 dir, out vec3 resultPos)
 
 vec3 getColor(vec3 pos, vec3 N, vec3 V)
 {
+    Material mat = getSceneOctreeColor(pos);
+
+    // Fresnel parameter
+    vec3 F0 = mix(matF0, mat.albedo, mat.metallic);
+
+    vec3 Lo = vec3(0.0);
+
+    // Directional lights
+    for (int i = 0; i < lightNumber; i++) 
+    {
+        vec3 lightPosition = (fragWorldToStartGridMatrix * vec4(lightPos[i], 1.0f)).xyz;
+
+        float distToLight = length(lightPosition - pos);
+        vec3 L = normalize(lightPosition - pos);
+        vec3 H = normalize(V + L);
+
+        vec3 sunColor = lightIntensity[i] * lightColor[i];
+
+        float coneAngle = atan(lightRadius[i]/distToLight);
+        float solidAngle = PI * sin(coneAngle) * pow((lightRadius[i]/distToLight), 2.0);
+        float intensity = useSoftShadows ? softshadow(pos + epsilon * N, L, 0.005, distToLight, solidAngle) : 1.0f;
+        vec3 radiance = sunColor * intensity;
+        
+        // Cook-torrance brdf
+        float NDF = DistributionGGX(N, H, mat.roughness);        
+        float G = GeometrySmith(N, V, L, mat.roughness);      
+        vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);       
+        
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
+        kD *= 1.0 - mat.metallic;	  
+        
+        vec3 numerator = NDF * G * F;
+        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + epsilon;
+        vec3 specular = numerator / denominator;  
+            
+        // Add to outgoing radiance Lo
+        float NdotL = max(dot(N, L), 0.0);                
+        Lo += (kD + specular) * radiance * NdotL;
+    }
+
+    return Lo;
+
+    /*
     vec3 color = vec3(0.0);
     for (int i = 0; i < lightNumber; ++i)
     {
@@ -649,6 +713,7 @@ vec3 getColor(vec3 pos, vec3 N, vec3 V)
     }
 
     return color;
+    */
 }
 
 vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle) 
@@ -743,7 +808,7 @@ vec3 getRandomDirection(vec3 N, uint seed, out uint outSeed, out float pdf)
 #define indirectLightRec(name, name0)                                              \
 vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                          \
 {                                                                                  \
-    vec3 albedo = getSceneOctreeColor(pos);                                        \
+    vec3 albedo = getSceneOctreeColor(pos).albedo;                                 \
                                                                                    \
     float solidAngle;                                                              \
     vec3 directLight = getDirectLighting(pos, N, V, seed, solidAngle);             \
@@ -808,7 +873,7 @@ void main()
     vec3 color = vec3(0.0);
     if (!useIndirect) 
     {
-        vec3 albedo = getSceneOctreeColor(gridPosition);
+        vec3 albedo = getSceneOctreeColor(gridPosition).albedo;
 
         float solidAngle;
         color = getDirectLighting(gridPosition, N, V, seed, solidAngle) * (albedo / PI);

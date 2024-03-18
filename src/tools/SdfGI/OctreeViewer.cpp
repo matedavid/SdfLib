@@ -79,7 +79,7 @@ public:
     {
         for (const auto &node : mCubes)
         {
-            mShader->setColor(node->color);
+            mShader->setColor(node->material.albedo);
 
             const auto size = node->halfSize * 2.0f;
 
