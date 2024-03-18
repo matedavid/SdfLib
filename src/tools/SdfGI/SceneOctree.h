@@ -38,11 +38,8 @@ constexpr uint32_t SHADER_CHILD_MASK = 0x7fffffff;
 
 struct ShaderOctreeNode
 {
-    // uint32_t isLeaf = 0; float _padding1[3];
-    // glm::uvec4 childrenIndices[8];
-
     // 32 bits
-    // - bit 32:   isLeaf
+    // - bit 31:   isLeaf
     // - bit 30-0: children idx
     uint32_t data; float _padding1[3];
 
