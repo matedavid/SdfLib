@@ -47,27 +47,45 @@ SceneOctree::SceneOctree(const sdflib::Mesh &mesh, int maxDepth)
     renderNode(mRoot, mesh);
 
     // Create ShaderOctreeNode array
-    const uint32_t rootIdx = generateShaderOctreeData(mRoot);
-    assert(rootIdx == 0);
+    {
+        const auto& node = mRoot;
+        assert(node->type == OctreeNode::Type::Gray);
+
+        ShaderOctreeNode shaderNode;
+        shaderNode.min = node->center - glm::vec3(node->halfSize);
+        shaderNode.max = node->center + glm::vec3(node->halfSize);
+        // shaderNode.ref = node.get();
+
+        mShaderOctreeData.push_back(shaderNode);
+
+        const uint32_t firstChild = generateShaderOctreeData(mRoot);
+        assert(firstChild == 1);
+
+        mShaderOctreeData[0].setIndex(firstChild); 
+    }
 
     // Check shader octree is correct
     /*
     {
         for (size_t i = 0; i < mShaderOctreeData.size(); ++i)
         {
-            auto node = mShaderOctreeData[i];
+            const auto& node = mShaderOctreeData[i];
 
-            if (bool(node.isLeaf))
+            assert(node.ref->type != OctreeNode::Type::Black || node.getIsLeaf());
+            assert(node.ref->type != OctreeNode::Type::White || node.getIsLeaf());
+
+            if (node.getIsLeaf())
             {
                 std::cout << "node idx: " << i << " is leaf\n";
                 continue;
             }
 
+            auto childIdx = node.getIndex();
             for (size_t j = 0; j < 8; ++j)
             {
-                auto child = mShaderOctreeData[node.childrenIndices[j]];
-                std::cout << "node idx: " << i << " child: " << node.childrenIndices[j] << " with index: " << node.childrenIndices[j] << "\n";
-                assert(node.ref->children[j].get() == child.ref);
+                std::cout << "node idx: " << i << " children number: " << j << " position: " << (childIdx+j) << "\n";
+                std::cout << "\t" << node.ref->children[j].get() << " " << mShaderOctreeData[childIdx+j].ref << "\n";
+                assert(node.ref->children[j].get() == mShaderOctreeData[childIdx+j].ref);
             }
         }
     }
@@ -190,32 +208,42 @@ void SceneOctree::slowTriangleIntersectionTest(sdflib::BoundingBox bbox, const s
 
 uint32_t SceneOctree::generateShaderOctreeData(const std::unique_ptr<OctreeNode> &node)
 {
-    ShaderOctreeNode shaderNode;
-    shaderNode.min = node->center - glm::vec3(node->halfSize);
-    shaderNode.max = node->center + glm::vec3(node->halfSize);
-    // shaderNode.ref = node.get();
-
-    if (node->type == OctreeNode::Type::Black)
-    {
-        shaderNode.setIsLeaf();
-        shaderNode.color = glm::vec4(node->color, 1.0f);
-    }
-    else if (node->type == OctreeNode::Type::White)
-    {
-        shaderNode.setIsLeaf();
-        shaderNode.color = glm::vec4(0.0f);
-    }
-
     const uint32_t nodeIdx = mShaderOctreeData.size();
-    mShaderOctreeData.push_back(shaderNode);
-
-    if (shaderNode.isLeaf)
-        return nodeIdx;
 
     for (size_t i = 0; i < 8; ++i)
     {
-        const uint32_t childIdx = generateShaderOctreeData(node->children[i]);
-        mShaderOctreeData[nodeIdx].childrenIndices[i].x = childIdx;
+        const auto& child = node->children[i];
+
+        ShaderOctreeNode shaderNode;
+        shaderNode.min = child->center - glm::vec3(child->halfSize);
+        shaderNode.max = child->center + glm::vec3(child->halfSize);
+        // shaderNode.ref = child.get();
+
+        mShaderOctreeData.push_back(shaderNode);
+    }
+
+    for (size_t i = 0; i < 8; ++i) 
+    {
+        const auto& child = node->children[i];
+
+        if (child->type == OctreeNode::Type::Black)
+        {
+            mShaderOctreeData[nodeIdx+i].setIsLeaf();
+            mShaderOctreeData[nodeIdx+i].color = glm::vec4(child->color, 1.0f);
+        }
+        else if (child->type == OctreeNode::Type::White)
+        {
+            mShaderOctreeData[nodeIdx+i].setIsLeaf();
+            mShaderOctreeData[nodeIdx+i].color = glm::vec4(0.0f);
+        }
+        else if (child->type == OctreeNode::Type::Gray)
+        {
+            const uint32_t childIdx = generateShaderOctreeData(child);
+            mShaderOctreeData[nodeIdx+i].setIndex(childIdx);
+
+            assert(mShaderOctreeData[nodeIdx+i].getIndex() == childIdx);
+            // assert(mShaderOctreeData[mShaderOctreeData[nodeIdx+i].getIndex()].ref == child->children[0].get());
+        }
     }
 
     return nodeIdx;

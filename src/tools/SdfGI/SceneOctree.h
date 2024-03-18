@@ -33,10 +33,18 @@ struct OctreeNode
     std::array<std::unique_ptr<OctreeNode>, 8> children;
 };
 
+constexpr uint32_t SHADER_LEAF_MASK = 0x80000000;
+constexpr uint32_t SHADER_CHILD_MASK = 0x7fffffff;
+
 struct ShaderOctreeNode
 {
-    uint32_t isLeaf = 0; float _padding1[3];
-    glm::uvec4 childrenIndices[8];
+    // uint32_t isLeaf = 0; float _padding1[3];
+    // glm::uvec4 childrenIndices[8];
+
+    // 32 bits
+    // - bit 32:   isLeaf
+    // - bit 30-0: children idx
+    uint32_t data; float _padding1[3];
 
     // Bbox
     glm::vec3 min; float _padding2;
@@ -46,7 +54,22 @@ struct ShaderOctreeNode
 
     void setIsLeaf()
     {
-        isLeaf = 1;
+        data |= SHADER_LEAF_MASK;
+    }
+
+    bool getIsLeaf() const
+    {
+        return (data & SHADER_LEAF_MASK) != 0;
+    }
+
+    void setIndex(uint32_t idx)
+    {
+        data = (data & SHADER_LEAF_MASK) | (idx & SHADER_CHILD_MASK);
+    }
+
+    uint32_t getIndex() const
+    {
+        return data & SHADER_CHILD_MASK;
     }
 };
 

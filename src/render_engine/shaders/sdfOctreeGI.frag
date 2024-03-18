@@ -487,13 +487,15 @@ void main()
 }
 */
 
-// uint OCTREENODE_LEAF_MASK = 0x80000000;
-// uint OCTREENODE_CHILDREN_MASK = 0x7FFFFFFF;
+uint OCTREENODE_LEAF_MASK = 0x80000000;
+uint OCTREENODE_CHILDREN_MASK = 0x7FFFFFFF;
 
 struct OctreeNode 
 {
-    uint isLeaf;
-    uint childrenIndices[8];
+    // 32 bits
+    // - bit 32:   isLeaf
+    // - bit 30-0: children idx
+    uint data;
 
     vec3 bboxMin;
     vec3 bboxMax;
@@ -518,14 +520,16 @@ vec3 getSceneOctreeColor(vec3 gridPoint)
         return vec3(0.0);
     }
 
-    while (!bool(sceneData[idx].isLeaf))
+    while (!bool(sceneData[idx].data & OCTREENODE_LEAF_MASK))
     {
         uint prevIdx = idx;
         OctreeNode node = sceneData[idx];
 
+        uint firstChildIdx = node.data & OCTREENODE_CHILDREN_MASK;
+
         for (int i = 0; i < 8; ++i) 
         {
-            uint childIdx = node.childrenIndices[i];
+            uint childIdx = firstChildIdx + i;
 
             vec3 childBboxMin = sceneData[childIdx].bboxMin;
             vec3 childBboxMax = sceneData[childIdx].bboxMax;
