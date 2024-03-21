@@ -1094,7 +1094,7 @@ public:
 				ImGui::EndMenu();	
 			}
 			
-			ImGui::EndMenuBar();
+			ImGui::EndMainMenuBar();
 		}
 		if (mShowOptionsGUI)
 		{
