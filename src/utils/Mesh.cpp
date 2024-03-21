@@ -77,6 +77,9 @@ Mesh::Mesh(std::string filePath)
         if (material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == aiReturn_SUCCESS) 
             props.roughness = roughness;
 
+        props.metallic = glm::clamp(props.metallic, 0.1f, 1.0f);
+        props.roughness = glm::clamp(props.roughness, 0.1f, 1.0f);
+
         for (std::size_t f = 0; f < mesh->mNumFaces; ++f) 
             mMaterialPropertiesPerTriangle.push_back(props);
     }
