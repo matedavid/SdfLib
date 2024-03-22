@@ -46,9 +46,9 @@ uniform vec3 lightColor[4];
 uniform float lightRadius[4];
 
 //Material
+uniform vec3 matAlbedo;
 uniform float matMetallic;
 uniform float matRoughness;
-uniform vec3 matAlbedo;
 uniform vec3 matF0;
 
 uniform float minBorderValue;
@@ -852,7 +852,12 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
     return (directLight + indirectLight) * (albedo / PI);                          \
 }
 
-vec3 indirectLightDepth5(vec3 pos, vec3 N, vec3 V, int depth, uint seed) { float solidAngle; return getDirectLighting(pos, N, V, seed, solidAngle) * (matAlbedo/PI); }
+vec3 indirectLightDepth5(vec3 pos, vec3 N, vec3 V, int depth, uint seed) {
+    vec3 albedo = getSceneOctreeColor(pos).albedo;
+
+    float solidAngle; 
+    return getDirectLighting(pos, N, V, seed, solidAngle) * (albedo/PI); 
+}
 indirectLightRec(indirectLightDepth4, indirectLightDepth5);
 indirectLightRec(indirectLightDepth3, indirectLightDepth4);
 indirectLightRec(indirectLightDepth2, indirectLightDepth3);

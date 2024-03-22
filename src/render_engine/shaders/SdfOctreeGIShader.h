@@ -182,6 +182,8 @@ public:
         mEpsilon = 1e-3;
         glUniform1f(mEpsilonLocation, mEpsilon);
 
+        glUniform1i(mSimpleLocation, mSimple);
+
         //Global Illumination options
         glUniform1i(mUseIndirectLocation, mUseIndirect);
         glUniform1i(mNumSamplesLocation, mNumSamples);
