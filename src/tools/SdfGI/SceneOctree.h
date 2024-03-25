@@ -42,7 +42,7 @@ struct ShaderOctreeNode
     // 32 bits
     // - bit 31:   isLeaf
     // - bit 30-0: children idx
-    uint32_t data; float _padding1[3];
+    uint32_t data = 0; float _padding1[3];
 
     // Bbox
     glm::vec3 min; float _padding2;

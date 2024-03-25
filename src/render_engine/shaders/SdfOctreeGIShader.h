@@ -84,6 +84,12 @@ public:
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
+    ~SdfOctreeGIShader()
+    {
+        glDeleteBuffers(1, &mOctreeSSBO);
+        glDeleteBuffers(1, &mSceneOctreeSSBO);
+    }
+
     //Global Illumination Settings
     void setUseIndirect(bool useIndirect)
     {
@@ -196,7 +202,7 @@ public:
 
         if (mCubemapSkybox != nullptr)
         {
-            glUniform1f(mCubemapSkyboxLocation, 0);
+            glUniform1i(mCubemapSkyboxLocation, 0);
             mCubemapSkybox->bind(0);
         }
 

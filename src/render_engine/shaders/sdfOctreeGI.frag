@@ -561,6 +561,7 @@ Material getSceneOctreeColor(vec3 gridPoint)
         {
             // Should not happen
             Material mat;
+            mat.albedo = vec3(1.0, 0.0, 1.0);
             return mat;
         }
     }

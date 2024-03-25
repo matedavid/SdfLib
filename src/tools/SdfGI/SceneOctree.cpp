@@ -52,7 +52,7 @@ SceneOctree::SceneOctree(const sdflib::Mesh &mesh, int maxDepth)
         const auto& node = mRoot;
         assert(node->type == OctreeNode::Type::Gray);
 
-        ShaderOctreeNode shaderNode;
+        ShaderOctreeNode shaderNode{};
         shaderNode.min = node->center - glm::vec3(node->halfSize);
         shaderNode.max = node->center + glm::vec3(node->halfSize);
         // shaderNode.ref = node.get();
@@ -224,7 +224,7 @@ uint32_t SceneOctree::generateShaderOctreeData(const std::unique_ptr<OctreeNode>
     {
         const auto& child = node->children[i];
 
-        ShaderOctreeNode shaderNode;
+        ShaderOctreeNode shaderNode{};
         shaderNode.min = child->center - glm::vec3(child->halfSize);
         shaderNode.max = child->center + glm::vec3(child->halfSize);
         // shaderNode.ref = child.get();
