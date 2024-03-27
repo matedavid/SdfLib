@@ -240,6 +240,7 @@ public:
             assert(mColorFramebuffer->bake());
         }
 
+        /*
         // Accumulation
         {
             mAccumulationTexture = std::make_shared<Texture>(Texture::Description{
@@ -286,11 +287,13 @@ public:
             mAccumulationSaveShader = std::make_unique<ScreenPlaneShader>();
             mAccumulationSaveShader->setInputTexture(mResultTexture->id());
         }
+        */
 
         // Present
         {
             mScreenPresentShader = std::make_unique<GIScreenPresentShader>();
-            mScreenPresentShader->setInputTexture(mResultTexture->id());
+            // mScreenPresentShader->setInputTexture(mResultTexture->id());
+            mScreenPresentShader->setInputTexture(mColorTexture->id());
         }
 
         glFinish();
@@ -406,6 +409,7 @@ public:
             mColorFramebuffer->unbind();
         }
 
+        /*
         // Reset accumulation texture if necessary
         if (mAccumulationFrame == 1)
         {
@@ -442,6 +446,7 @@ public:
 
             mAccumulationSaveFramebuffer->unbind();
         }
+        */
 
         // Final pass
         {
@@ -487,6 +492,7 @@ public:
 
             ImGui::Text("Global Illumination Settings");
             ImGui::Checkbox("Use Indirect", &mUseIndirect);
+            ImGui::Text("Current frame: %d", mAccumulationFrame);
             ImGui::InputInt("Num Samples", &mNumSamples);
             ImGui::InputInt("Max Depth", &mMaxDepth);
             ImGui::InputInt("Max Raycast Iterations", &mMaxRaycastIterations);
@@ -706,8 +712,8 @@ private:
     int mLightNumber = 1;
     glm::vec3 mLightPosition[4] =
         {
-            glm::vec3(1.0f, 2.0f, 1.0f),
-            // glm::vec3 (0.0f, 0.2f, -1.5f),
+            // glm::vec3(1.0f, 2.0f, 1.0f),
+            glm::vec3 (0.0f, 0.9f, 0.0f),
             glm::vec3(-1.0f, 2.0f, 1.0f),
             glm::vec3(1.0f, 2.0f, -1.0f),
             glm::vec3(-1.0f, 2.0f, -1.0f)};
