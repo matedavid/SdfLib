@@ -495,12 +495,14 @@ struct Material
     vec3 albedo;
     float roughness;
     float metallic;
+
+    int idx;
 };
 
 struct OctreeNode 
 {
     // 32 bits
-    // - bit 32:   isLeaf
+    // - bit 31:   isLeaf
     // - bit 30-0: children idx
     uint data;
 
@@ -510,6 +512,9 @@ struct OctreeNode
     vec4 color;
     // roughness, metallic, -, -
     vec4 material;
+
+    // radiance caching
+    vec4 radiance;
 };
 
 layout(std140, binding = 4) buffer SceneOctree 
@@ -530,6 +535,7 @@ Material getSceneOctreeColor(vec3 gridPoint)
         mat.albedo = vec3(0.0, 0.0, 0.0);
         mat.roughness = 0.0;
         mat.metallic = 0.0;
+        mat.idx = -1;
 
         return mat; 
     }
@@ -562,6 +568,7 @@ Material getSceneOctreeColor(vec3 gridPoint)
             // Should not happen
             Material mat;
             mat.albedo = vec3(1.0, 0.0, 1.0);
+            mat.idx = -1;
             return mat;
         }
     }
@@ -570,6 +577,7 @@ Material getSceneOctreeColor(vec3 gridPoint)
     mat.albedo = sceneData[idx].color.rgb;
     mat.roughness = sceneData[idx].material.x;
     mat.metallic = sceneData[idx].material.y;
+    mat.idx = int(idx);
 
     return mat;
 }
@@ -809,7 +817,8 @@ vec3 getRandomDirection(vec3 N, uint seed, out uint outSeed, out float pdf)
 #define indirectLightRec(name, name0)                                              \
 vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                          \
 {                                                                                  \
-    vec3 albedo = getSceneOctreeColor(pos).albedo;                                 \
+    Material mat = getSceneOctreeColor(pos);                                       \
+    vec3 albedo = mat.albedo;                                                      \
                                                                                    \
     float solidAngle;                                                              \
     vec3 directLight = getDirectLighting(pos, N, V, seed, solidAngle);             \

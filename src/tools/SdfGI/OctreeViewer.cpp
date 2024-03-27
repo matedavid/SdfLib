@@ -130,7 +130,7 @@ int main(int argc, char **argv)
     }
     mesh.computeBoundingBox();
 
-    auto scene = std::make_shared<SceneOctree>(mesh, 8);
+    auto scene = std::make_shared<SceneOctree>(mesh, SceneOctree::RenderConfig{.maxDepth = 8});
     OctreeViewer viewer(scene);
 
     MainLoop loop;

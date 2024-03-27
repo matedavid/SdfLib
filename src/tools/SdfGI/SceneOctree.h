@@ -52,6 +52,9 @@ struct ShaderOctreeNode
     // roughness, metallic, -, -
     glm::vec4 materialProperties{};
 
+    // radiance caching
+    glm::vec4 radiance{0.0f};
+
     void setIsLeaf()
     {
         data |= SHADER_LEAF_MASK;
@@ -76,17 +79,18 @@ struct ShaderOctreeNode
 class SceneOctree
 {
 public:
-    SceneOctree(const sdflib::Mesh &mesh, int maxDepth);
+    struct RenderConfig
+    {
+        int maxDepth;
+    };
+
+    SceneOctree(const sdflib::Mesh &mesh, RenderConfig config);
     ~SceneOctree() = default;
 
     const std::unique_ptr<OctreeNode> &getRoot() { return mRoot; }
     const std::vector<ShaderOctreeNode> &getShaderOctreeData() { return mShaderOctreeData; }
 
 private:
-    struct RenderConfig
-    {
-        int maxDepth;
-    };
     RenderConfig mRenderConfig;
 
     std::unique_ptr<OctreeNode> mRoot;

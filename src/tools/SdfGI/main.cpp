@@ -78,7 +78,10 @@ public:
         }
 
         // Load Scene octree
-        auto *sceneOctree = new SceneOctree(mesh, 8);
+        const auto config = SceneOctree::RenderConfig{
+            .maxDepth = 9,
+        };
+        auto *sceneOctree = new SceneOctree(mesh, config);
         mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf, *sceneOctree);
 
         {
@@ -713,7 +716,7 @@ private:
     glm::vec3 mLightPosition[4] =
         {
             // glm::vec3(1.0f, 2.0f, 1.0f),
-            glm::vec3 (0.0f, 0.9f, 0.0f),
+            glm::vec3(0.0f, 0.9f, 0.0f),
             glm::vec3(-1.0f, 2.0f, 1.0f),
             glm::vec3(1.0f, 2.0f, -1.0f),
             glm::vec3(-1.0f, 2.0f, -1.0f)};

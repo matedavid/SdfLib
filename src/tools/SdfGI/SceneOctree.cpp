@@ -5,12 +5,8 @@
 #include <stack>
 #include <queue>
 
-SceneOctree::SceneOctree(const sdflib::Mesh &mesh, int maxDepth)
+SceneOctree::SceneOctree(const sdflib::Mesh &mesh, RenderConfig config) : mRenderConfig(config)
 {
-    mRenderConfig = {
-        .maxDepth = maxDepth,
-    };
-
     mVertices = mesh.getVertices();
 
     mTriangles = std::vector<Triangle>();
