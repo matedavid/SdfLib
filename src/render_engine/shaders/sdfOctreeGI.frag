@@ -846,6 +846,17 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
                                                                                    \
             vec3 VIndirect = -direction;                                           \
                                                                                    \
+            Material indirectMat = getSceneOctreeColor(hitPosition);               \
+            if (sceneData[indirectMat.idx].radiance.w >= 20.0)                     \
+            {                                                                      \
+                vec3 radianceColor =                                               \
+                    sceneData[indirectMat.idx].radiance.rgb                        \
+                    * (mat.albedo / PI)                                            \
+                    * max(dot(N, direction), 0.0);                                 \
+                indirectLight += radianceColor / pdf;                              \
+                continue;                                                          \
+            }                                                                      \
+                                                                                   \
             vec3 indirectColor =                                                   \
                 name0(hitPosition, NIndirect, VIndirect, depth-1, seed)            \
                 * max(dot(N, direction), 0.0);                                     \
@@ -858,6 +869,25 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         }                                                                          \
     }                                                                              \
     indirectLight /= float(numSamples);                                            \
+                                                                                   \
+    if (sceneData[mat.idx].radiance.w == 0.0)                                      \
+    {                                                                              \
+        sceneData[mat.idx].radiance = vec4(indirectLight, float(numSamples));      \
+    }                                                                              \
+    else                                                                           \
+    {                                                                              \
+        vec4 currentRadiance = sceneData[mat.idx].radiance;                        \
+        float totalSamples = currentRadiance.w + float(numSamples);                \
+        vec3 newRadiance =                                                         \
+            (currentRadiance.rgb * currentRadiance.w + indirectLight)              \
+            / totalSamples;                                                        \
+                                                                                   \
+        sceneData[mat.idx].radiance = vec4(newRadiance, totalSamples);             \
+                                                                                   \
+        indirectLight = newRadiance;                                               \
+    }                                                                              \
+                                                                                   \
+    return indirectLight * (albedo / PI);                                          \
                                                                                    \
     return (directLight + indirectLight) * (albedo / PI);                          \
 }
