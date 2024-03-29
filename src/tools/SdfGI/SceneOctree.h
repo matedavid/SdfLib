@@ -53,7 +53,8 @@ struct ShaderOctreeNode
     glm::vec4 materialProperties{};
 
     // radiance caching
-    glm::vec4 radiance{0.0f};
+    glm::vec4 readRadiance{0.0f};
+    glm::vec4 writeRadiance{0.0f};
 
     void setIsLeaf()
     {

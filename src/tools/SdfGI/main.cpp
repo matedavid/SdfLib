@@ -19,6 +19,7 @@
 #include "render_engine/shaders/GIScreenPresentShader.h"
 #include "render_engine/shaders/ScreenPlaneShader.h"
 #include "render_engine/shaders/ColorsShader.h"
+#include "render_engine/shaders/GICopyRadianceShader.h"
 
 #include "Texture.h"
 #include "Framebuffer.h"
@@ -83,6 +84,7 @@ public:
         };
         auto *sceneOctree = new SceneOctree(mesh, config);
         mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf, *sceneOctree);
+        mCopyRadianceShader = std::make_shared<GICopyRadianceShader>(*octreeSdf, mOctreeGIShader->mSceneOctreeSSBO);
 
         {
             const auto dataSize = sceneOctree->getShaderOctreeData().size() * sizeof(ShaderOctreeNode) * 1e-6;
@@ -241,6 +243,18 @@ public:
             mColorFramebuffer->unbind();
 
             assert(mColorFramebuffer->bake());
+        }
+
+        // Copy radiance pass
+        {
+            mCopyRadianceFramebuffer = std::make_shared<Framebuffer>();
+            mCopyRadianceFramebuffer->bind();
+
+            mCopyRadianceFramebuffer->attach(*mDepthTexture, GL_DEPTH_ATTACHMENT);
+
+            mCopyRadianceFramebuffer->unbind();
+
+            assert(mCopyRadianceFramebuffer->bake());
         }
 
         /*
@@ -412,6 +426,26 @@ public:
             mColorFramebuffer->unbind();
         }
 
+        // Copy Radiance pass
+        {
+            mCopyRadianceFramebuffer->bind();
+            glDepthFunc(GL_LEQUAL);
+
+            mCopyRadianceShader->bind();
+
+            mCopyRadianceShader->setReset(mResetAccumulation);
+
+            mModelRenderer->setShader(mCopyRadianceShader.get());
+            drawModel();
+
+            if (mResetAccumulation) mResetAccumulation = false;
+
+            mModelRenderer->setShader(mOctreeGIShader.get());
+
+            glDepthFunc(GL_LESS);
+            mCopyRadianceFramebuffer->unbind();
+        }
+
         /*
         // Reset accumulation texture if necessary
         if (mAccumulationFrame == 1)
@@ -496,6 +530,10 @@ public:
             ImGui::Text("Global Illumination Settings");
             ImGui::Checkbox("Use Indirect", &mUseIndirect);
             ImGui::Text("Current frame: %d", mAccumulationFrame);
+            if (ImGui::Button("Reset Accumulation"))
+            {
+                mResetAccumulation = true;
+            }
             ImGui::InputInt("Num Samples", &mNumSamples);
             ImGui::InputInt("Max Depth", &mMaxDepth);
             ImGui::InputInt("Max Raycast Iterations", &mMaxRaycastIterations);
@@ -687,6 +725,11 @@ private:
     std::shared_ptr<Framebuffer> mAccumulationFramebuffer;
     std::shared_ptr<GIAccumulationShader> mGIAccumulationShader;
     std::shared_ptr<Texture> mResultTexture;
+
+    // Copy radiance
+    std::shared_ptr<Framebuffer> mCopyRadianceFramebuffer;
+    std::shared_ptr<GICopyRadianceShader> mCopyRadianceShader;
+    bool mResetAccumulation = false;
 
     // Skybox
     bool mUseCubemapSkybox = false;

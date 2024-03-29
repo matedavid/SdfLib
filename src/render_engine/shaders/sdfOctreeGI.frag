@@ -514,7 +514,8 @@ struct OctreeNode
     vec4 material;
 
     // radiance caching
-    vec4 radiance;
+    vec4 readRadiance;
+    vec4 writeRadiance;
 };
 
 layout(std140, binding = 4) buffer SceneOctree 
@@ -818,6 +819,7 @@ vec3 getRandomDirection(vec3 N, uint seed, out uint outSeed, out float pdf)
 vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                          \
 {                                                                                  \
     Material mat = getSceneOctreeColor(pos);                                       \
+    if (mat.idx == -1) return vec3(0.0);                                           \
     vec3 albedo = mat.albedo;                                                      \
                                                                                    \
     float solidAngle;                                                              \
@@ -825,6 +827,14 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
     if (depth == 0) return directLight * (albedo/PI);                              \
                                                                                    \
     vec3 indirectLight = vec3(0.0);                                                \
+                                                                                   \
+    vec4 currentRadiance = sceneData[mat.idx].readRadiance;                        \
+    if (currentRadiance.w >= 20.0 && depth != maxDepth)                            \
+    {                                                                              \
+        indirectLight = currentRadiance.rgb;                                       \
+    }                                                                              \
+    else                                                                           \
+    {                                                                              \
     for (int i = 0; i < numSamples; ++i)                                           \
     {                                                                              \
         seed += uint(i) + uint(depth);                                             \
@@ -846,17 +856,6 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
                                                                                    \
             vec3 VIndirect = -direction;                                           \
                                                                                    \
-            Material indirectMat = getSceneOctreeColor(hitPosition);               \
-            if (sceneData[indirectMat.idx].radiance.w >= 20.0)                     \
-            {                                                                      \
-                vec3 radianceColor =                                               \
-                    sceneData[indirectMat.idx].radiance.rgb                        \
-                    * (mat.albedo / PI)                                            \
-                    * max(dot(N, direction), 0.0);                                 \
-                indirectLight += radianceColor / pdf;                              \
-                continue;                                                          \
-            }                                                                      \
-                                                                                   \
             vec3 indirectColor =                                                   \
                 name0(hitPosition, NIndirect, VIndirect, depth-1, seed)            \
                 * max(dot(N, direction), 0.0);                                     \
@@ -869,25 +868,30 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         }                                                                          \
     }                                                                              \
     indirectLight /= float(numSamples);                                            \
-                                                                                   \
-    if (sceneData[mat.idx].radiance.w == 0.0)                                      \
-    {                                                                              \
-        sceneData[mat.idx].radiance = vec4(indirectLight, float(numSamples));      \
     }                                                                              \
-    else                                                                           \
+                                                                                   \
+    if (depth == maxDepth)                                                         \
     {                                                                              \
-        vec4 currentRadiance = sceneData[mat.idx].radiance;                        \
+    if (currentRadiance.w == 0.0)                                                  \
+    {                                                                              \
+        sceneData[mat.idx].writeRadiance = vec4(indirectLight, float(numSamples)); \
+    }                                                                              \
+    else if (currentRadiance.w <= 1000.0)                                          \
+    {                                                                              \
         float totalSamples = currentRadiance.w + float(numSamples);                \
         vec3 newRadiance =                                                         \
             (currentRadiance.rgb * currentRadiance.w + indirectLight)              \
             / totalSamples;                                                        \
                                                                                    \
-        sceneData[mat.idx].radiance = vec4(newRadiance, totalSamples);             \
+        sceneData[mat.idx].writeRadiance = vec4(newRadiance, totalSamples);        \
                                                                                    \
         indirectLight = newRadiance;                                               \
     }                                                                              \
-                                                                                   \
-    return indirectLight * (albedo / PI);                                          \
+    else                                                                           \
+    {                                                                              \
+        indirectLight = currentRadiance.rgb;                                       \
+    }                                                                              \
+    }                                                                              \
                                                                                    \
     return (directLight + indirectLight) * (albedo / PI);                          \
 }

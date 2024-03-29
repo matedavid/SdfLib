@@ -224,6 +224,9 @@ public:
         glUniform3f(mF0Location, mF0.x, mF0.y, mF0.z);
 
     }
+
+    unsigned int mSceneOctreeSSBO;
+
 private:
     unsigned int mOctreeSSBO;
 
@@ -275,8 +278,6 @@ private:
 
     unsigned int mCubemapSkyboxLocation;
     std::shared_ptr<Cubemap> mCubemapSkybox;
-
-    unsigned int mSceneOctreeSSBO;
 
     //Options
     unsigned int mMaxShadowIterationsLocation;
