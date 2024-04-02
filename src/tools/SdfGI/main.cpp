@@ -80,10 +80,12 @@ public:
 
         // Load Scene octree
         const auto config = SceneOctree::RenderConfig{
-            .maxDepth = 9,
+            .maxDepth = 8,
         };
         auto *sceneOctree = new SceneOctree(mesh, config);
+        spdlog::info("Started compiling GI shader");
         mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf, *sceneOctree);
+        spdlog::info("Finished compiling GI shader");
         mCopyRadianceShader = std::make_shared<GICopyRadianceShader>(*octreeSdf, mOctreeGIShader->mSceneOctreeSSBO);
 
         {

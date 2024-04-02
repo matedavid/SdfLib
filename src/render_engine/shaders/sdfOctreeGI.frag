@@ -829,59 +829,57 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
     vec3 indirectLight = vec3(0.0);                                                \
                                                                                    \
     vec4 currentRadiance = sceneData[mat.idx].readRadiance;                        \
-    if (currentRadiance.w >= 20.0 && depth != maxDepth)                            \
+    if (currentRadiance.w >= 250.0)                                                \
     {                                                                              \
         indirectLight = currentRadiance.rgb;                                       \
     }                                                                              \
     else                                                                           \
     {                                                                              \
-    for (int i = 0; i < numSamples; ++i)                                           \
-    {                                                                              \
-        seed += uint(i) + uint(depth);                                             \
-                                                                                   \
-        float pdf;                                                                 \
-        vec3 direction = getRandomDirection(N, seed, seed, pdf);                   \
-                                                                                   \
-        vec3 hitPosition;                                                          \
-        bool hit = raycast(pos + epsilon * N, direction, hitPosition);             \
-                                                                                   \
-        if (hit)                                                                   \
+        for (int i = 0; i < numSamples; ++i)                                       \
         {                                                                          \
-            vec3 gradient = mapGradient(hitPosition);                              \
-            vec3 NIndirect;                                                        \
-            if (dot(direction, gradient) > 0.0) NIndirect = -gradient;             \
-            else NIndirect = gradient;                                             \
+            seed += uint(i) + uint(depth);                                         \
                                                                                    \
-            NIndirect = normalize(NIndirect);                                      \
+            float pdf;                                                             \
+            vec3 direction = getRandomDirection(N, seed, seed, pdf);               \
                                                                                    \
-            vec3 VIndirect = -direction;                                           \
+            vec3 hitPosition;                                                      \
+            bool hit = raycast(pos + epsilon * N, direction, hitPosition);         \
                                                                                    \
-            vec3 indirectColor =                                                   \
-                name0(hitPosition, NIndirect, VIndirect, depth-1, seed)            \
-                * max(dot(N, direction), 0.0);                                     \
-            indirectLight += indirectColor / pdf;                                  \
+            if (hit)                                                               \
+            {                                                                      \
+                vec3 gradient = mapGradient(hitPosition);                          \
+                vec3 NIndirect;                                                    \
+                if (dot(direction, gradient) > 0.0) NIndirect = -gradient;         \
+                else NIndirect = gradient;                                         \
+                                                                                   \
+                NIndirect = normalize(NIndirect);                                  \
+                                                                                   \
+                vec3 VIndirect = -direction;                                       \
+                                                                                   \
+                vec3 indirectColor =                                               \
+                    name0(hitPosition, NIndirect, VIndirect, depth-1, seed)        \
+                    * max(dot(N, direction), 0.0);                                 \
+                indirectLight += indirectColor / pdf;                              \
+            }                                                                      \
+            else                                                                   \
+            {                                                                      \
+                indirectLight += getSkyboxColor(direction)                         \
+                    * max(dot(N, direction), 0.0) / pdf;                           \
+            }                                                                      \
         }                                                                          \
-        else                                                                       \
-        {                                                                          \
-            indirectLight += getSkyboxColor(direction)                             \
-                * max(dot(N, direction), 0.0) / pdf;                               \
-        }                                                                          \
-    }                                                                              \
-    indirectLight /= float(numSamples);                                            \
+        indirectLight /= float(numSamples);                                        \
     }                                                                              \
                                                                                    \
-    if (depth == maxDepth)                                                         \
-    {                                                                              \
+    if (depth == maxDepth) {                                                       \
     if (currentRadiance.w == 0.0)                                                  \
     {                                                                              \
         sceneData[mat.idx].writeRadiance = vec4(indirectLight, float(numSamples)); \
     }                                                                              \
-    else if (currentRadiance.w <= 1000.0)                                          \
+    else if (true || currentRadiance.w <= 1000.0)                                  \
     {                                                                              \
         float totalSamples = currentRadiance.w + float(numSamples);                \
         vec3 newRadiance =                                                         \
-            (currentRadiance.rgb * currentRadiance.w + indirectLight)              \
-            / totalSamples;                                                        \
+            (numSamples / totalSamples) * indirectLight + (currentRadiance.w / totalSamples) * currentRadiance.rgb;                    \
                                                                                    \
         sceneData[mat.idx].writeRadiance = vec4(newRadiance, totalSamples);        \
                                                                                    \
@@ -889,7 +887,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
     }                                                                              \
     else                                                                           \
     {                                                                              \
-        indirectLight = currentRadiance.rgb;                                       \
+        /*indirectLight = currentRadiance.rgb;*/                                       \
     }                                                                              \
     }                                                                              \
                                                                                    \
