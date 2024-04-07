@@ -63,7 +63,6 @@ uniform bool simple;
 in vec3 gridPosition;
 in vec3 gridNormal;
 in vec3 cameraPos;
-in mat4 fragWorldToStartGridMatrix;
 in mat4 fragInverseWorldToStartGridMatrix;
 
 out vec4 fragColor;
@@ -328,6 +327,7 @@ vec3 mapGradient(vec3 pos)
     ));
 }
 
+/*
 //LIGHTING
 float softshadow(vec3 ro, vec3 rd)
 {
@@ -398,6 +398,7 @@ float softshadowOR(vec3 ro, vec3 rd, float far, float omega)
     }
     return res;
 }
+*/
 
 //Inigo Quilez improved soft shadow
 float softshadow( in vec3 ro, in vec3 rd, float mint, float maxt, float w )
@@ -414,78 +415,6 @@ float softshadow( in vec3 ro, in vec3 rd, float mint, float maxt, float w )
     res = max(res,-1.0);
     return 0.25*(1.0+res)*(1.0+res)*(2.0-res);
 }
-
-/*
-vec3 mapColor(vec3 pos, vec3 N, vec3 V)
-{
-    //Normal
-    // vec3 N = normalize(gridNormal);
-    //View vector
-    // vec3 V = normalize(cameraPos - pos);
-
-    //Plane vs model
-    vec3 aPos = pos + vec3(-0.5, -0.1, -0.5);
-    float fd = max(length(aPos.xz) - 1.3, abs(aPos.y) - 0.07);
-
-
-    // Fresnel parameter
-    vec3 F0 = mix(matF0, matAlbedo, matMetallic);
-
-    vec3 Lo = vec3(0.0);
-
-    // Directional lights
-    for (int i = 0; i < lightNumber; i++) 
-    {
-        float distToLight = length(lightPos[i] - pos);
-        vec3 L = normalize(lightPos[i] - pos);
-        vec3 H = normalize(V + L);
-
-        vec3 sunColor = lightIntensity[i] * lightColor[i];
-
-        float coneAngle = atan(lightRadius[i]/distToLight);
-        float solidAngle = PI * sin(coneAngle) * pow((lightRadius[i]/distToLight), 2.0);
-        //float intensity = useSoftShadows ? min(atan(softshadowToPoint(pos + epsilon * N, L, distToLight)) / coneAngle, 1.0) : 1.0f;
-        //float intensity = useSoftShadows ? min(atan(softshadowOR(pos + epsilon * N, L, distToLight, overRelaxation)) / coneAngle, 1.0) : 1.0f;
-        float intensity = useSoftShadows ? softshadow(pos + epsilon * N, L, 0.005, distToLight, solidAngle) : 1.0f;
-        vec3 radiance = sunColor * intensity;
-        
-        // Cook-torrance brdf
-        float NDF = DistributionGGX(N, H, matRoughness);        
-        float G = GeometrySmith(N, V, L, matRoughness);      
-        vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);       
-        
-        vec3 kS = F;
-        vec3 kD = vec3(1.0) - kS;
-        kD *= 1.0 - matMetallic;	  
-        
-        vec3 numerator = NDF * G * F;
-        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + epsilon;
-        vec3 specular = numerator / denominator;  
-            
-        // Add to outgoing radiance Lo
-        float NdotL = max(dot(N, L), 0.0);                
-        Lo += (kD * matAlbedo / PI + specular) * radiance * NdotL;
-    }
-
-    vec3 ambient = vec3(0.5) * matAlbedo; // Ambient light estimation
-    vec3 color = ambient + Lo;
-
-    color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0/2.2));
-   
-    return color;
-}
-
-void main()
-{
-    vec3 outColor = vec3(0.9);
-    
-    vec3 hitPoint = gridPosition;
-    outColor = mapColor(hitPoint, cameraPos);
-
-    fragColor = vec4(outColor, 1.0);
-}
-*/
 
 uint OCTREENODE_LEAF_MASK = 0x80000000;
 uint OCTREENODE_CHILDREN_MASK = 0x7FFFFFFF;
@@ -669,7 +598,7 @@ vec3 getColor(vec3 pos, vec3 N, vec3 V)
     // Directional lights
     for (int i = 0; i < lightNumber; i++) 
     {
-        vec3 lightPosition = (fragWorldToStartGridMatrix * vec4(lightPos[i], 1.0f)).xyz;
+        vec3 lightPosition = (worldToStartGridMatrix * vec4(lightPos[i], 1.0f)).xyz;
 
         float distToLight = length(lightPosition - pos);
         vec3 L = normalize(lightPosition - pos);
@@ -701,29 +630,6 @@ vec3 getColor(vec3 pos, vec3 N, vec3 V)
     }
 
     return Lo;
-
-    /*
-    vec3 color = vec3(0.0);
-    for (int i = 0; i < lightNumber; ++i)
-    {
-        vec3 lightPosition = (fragWorldToStartGridMatrix * vec4(lightPos[i], 1.0f)).xyz;
-
-        vec3 colorLight = lightIntensity[i] * lightColor[i];
-
-        float distToLight = length(lightPosition - pos);
-        vec3 L = normalize(lightPosition - pos);
-
-        float coneAngle = atan(lightRadius[i]/distToLight);
-        float solidAngle = PI * sin(coneAngle) * pow((lightRadius[i]/distToLight), 2.0);
-
-        float shadow = useSoftShadows ? softshadow(pos + epsilon * N, L, 0.005, distToLight, solidAngle) : 1.0f;
-
-        vec3 Lo = shadow * colorLight * max(dot(N, L), 0.0);
-        color += Lo;
-    }
-
-    return color;
-    */
 }
 
 vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle) 
@@ -732,7 +638,7 @@ vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle
 
     uint seedLocal = seed;
 
-    vec3 lightPosition = (fragWorldToStartGridMatrix * vec4(lightPos[0], 1.0f)).xyz;
+    vec3 lightPosition = (worldToStartGridMatrix * vec4(lightPos[0], 1.0f)).xyz;
 
     float distToLight = distance(lightPosition, pos);
     vec3 colorLight = lightIntensity[0] * lightColor[0];
@@ -870,12 +776,11 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         indirectLight /= float(numSamples);                                        \
     }                                                                              \
                                                                                    \
-    if (depth == maxDepth) {                                                       \
     if (currentRadiance.w == 0.0)                                                  \
     {                                                                              \
         sceneData[mat.idx].writeRadiance = vec4(indirectLight, float(numSamples)); \
     }                                                                              \
-    else if (true || currentRadiance.w <= 1000.0)                                  \
+    else                                                                           \
     {                                                                              \
         float totalSamples = currentRadiance.w + float(numSamples);                \
         vec3 newRadiance =                                                         \
@@ -884,11 +789,6 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         sceneData[mat.idx].writeRadiance = vec4(newRadiance, totalSamples);        \
                                                                                    \
         indirectLight = newRadiance;                                               \
-    }                                                                              \
-    else                                                                           \
-    {                                                                              \
-        /*indirectLight = currentRadiance.rgb;*/                                       \
-    }                                                                              \
     }                                                                              \
                                                                                    \
     return (directLight + indirectLight) * (albedo / PI);                          \

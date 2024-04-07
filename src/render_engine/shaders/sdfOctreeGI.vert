@@ -13,7 +13,6 @@ uniform mat3 normalModelMatrix;
 out vec3 gridPosition;
 out vec3 gridNormal;
 out vec3 cameraPos;
-out mat4 fragWorldToStartGridMatrix;
 out mat4 fragInverseWorldToStartGridMatrix;
 
 void main() 
@@ -22,13 +21,7 @@ void main()
     gridPosition = (worldToStartGridMatrix * modelMatrix * vec4(position, 1.0f)).xyz;
     gridNormal =  normalWorldToStartGridMatrix * normalModelMatrix * normals;
 
-    fragWorldToStartGridMatrix = worldToStartGridMatrix;
     fragInverseWorldToStartGridMatrix = inverse(worldToStartGridMatrix);
 
 	gl_Position = projectionViewModelMatrix * vec4(position, 1.0f);
-
-    // cameraPos = vec3(invViewModelMatrix * vec4(vec3(0.0), 1.0));
-    // gridPosition = (modelMatrix * vec4(position, 1.0f)).xyz;
-    // gridNormal = normalModelMatrix * normals;
-	// gl_Position = projectionViewModelMatrix * vec4(position, 1.0f);
 }
