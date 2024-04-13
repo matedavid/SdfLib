@@ -20,6 +20,7 @@
 #include "render_engine/shaders/ScreenPlaneShader.h"
 #include "render_engine/shaders/ColorsShader.h"
 #include "render_engine/shaders/GICopyRadianceShader.h"
+#include "render_engine/shaders/GIDenoiseShader.h"
 
 #include "Texture.h"
 #include "Framebuffer.h"
@@ -259,6 +260,29 @@ public:
             assert(mCopyRadianceFramebuffer->bake());
         }
 
+        // Denoising pass
+        {
+            mResultTexture = std::make_shared<Texture>(Texture::Description{
+                .width = width,
+                .height = height,
+                .internalFormat = GL_RGB32F,
+                .format = GL_RGB,
+                .pixelDataType = GL_FLOAT,
+            });
+
+            mDenoiseShader = std::make_shared<GIDenoiseShader>();
+            mDenoiseShader->setColorTexture(mColorTexture->id());
+
+            mDenoiseFramebuffer = std::make_shared<Framebuffer>();
+            mDenoiseFramebuffer->bind();
+
+            mDenoiseFramebuffer->attach(*mResultTexture, GL_COLOR_ATTACHMENT0);
+
+            mDenoiseFramebuffer->unbind();
+
+            assert(mDenoiseFramebuffer->bake());
+        }
+
         /*
         // Accumulation
         {
@@ -311,8 +335,8 @@ public:
         // Present
         {
             mScreenPresentShader = std::make_unique<GIScreenPresentShader>();
-            // mScreenPresentShader->setInputTexture(mResultTexture->id());
-            mScreenPresentShader->setInputTexture(mColorTexture->id());
+            mScreenPresentShader->setInputTexture(mResultTexture->id());
+            // mScreenPresentShader->setInputTexture(mColorTexture->id());
         }
 
         glFinish();
@@ -446,6 +470,17 @@ public:
 
             glDepthFunc(GL_LESS);
             mCopyRadianceFramebuffer->unbind();
+        }
+
+        // Denoise pass
+        {
+            mDenoiseFramebuffer->bind();
+
+            mScreenPlane->setShader(mDenoiseShader.get());
+            mScreenPlane->draw(getMainCamera());
+
+            glEnable(GL_DEPTH_TEST);
+            mDenoiseFramebuffer->unbind();
         }
 
         /*
@@ -732,6 +767,10 @@ private:
     std::shared_ptr<Framebuffer> mCopyRadianceFramebuffer;
     std::shared_ptr<GICopyRadianceShader> mCopyRadianceShader;
     bool mResetAccumulation = false;
+
+    // Denoise 
+    std::shared_ptr<Framebuffer> mDenoiseFramebuffer;
+    std::shared_ptr<GIDenoiseShader> mDenoiseShader;
 
     // Skybox
     bool mUseCubemapSkybox = false;

@@ -512,6 +512,47 @@ Material getSceneOctreeColor(vec3 gridPoint)
     return mat;
 }
 
+vec4 sampleCurrentRadiance(int idx, vec3 gridPos)
+{
+    if (idx == -1) return vec4(0.0);
+    vec3 pos = (fragInverseWorldToStartGridMatrix * vec4(gridPos, 1.0)).xyz;
+
+    OctreeNode node = sceneData[idx];
+
+    vec3 directions[] = {
+        vec3(1.0, 0.0, 0.0),
+        vec3(-1.0, 0.0, 0.0),
+        vec3(0.0, 1.0, 0.0),
+        vec3(0.0, -1.0, 0.0),
+        vec3(0.0, 0.0, 1.0),
+        vec3(0.0, 0.0, -1.0),
+    };
+
+    vec3 center = (node.bboxMin + node.bboxMax) * 0.5;
+    float size = length(node.bboxMax - node.bboxMin);
+
+    vec3 radiance = node.readRadiance.rgb;
+    float sumWeights = 1.0;
+
+    for (int i = 0; i < 6; ++i) {
+                vec3 direction = directions[i];
+                vec3 neighborPos = center + direction * size;
+                vec3 neighborGridPos = (worldToStartGridMatrix * vec4(neighborPos, 1.0)).xyz;
+
+                // float dist = max(distance(neighborPos, pos), 1.0);
+                // float weight = 1.0 / dist;
+
+                int neighborIdx = getSceneOctreeColor(neighborGridPos).idx;
+                if (neighborIdx == -1) continue;
+                if (sceneData[neighborIdx].readRadiance.w < 40.0) continue;
+
+                radiance += sceneData[neighborIdx].readRadiance.rgb;
+                sumWeights += 1.0;
+    }
+
+    return vec4(radiance / sumWeights, node.readRadiance.w);
+}
+
 uint pcg_hash(uint seed)
 {
     uint state = seed * 747796405u + 2891336453u;
@@ -735,7 +776,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
     vec3 indirectLight = vec3(0.0);                                                \
                                                                                    \
     vec4 currentRadiance = sceneData[mat.idx].readRadiance;                        \
-    if (currentRadiance.w >= 250.0)                                                \
+    if (currentRadiance.w >= 500.0)                                                \
     {                                                                              \
         indirectLight = currentRadiance.rgb;                                       \
     }                                                                              \
@@ -800,10 +841,7 @@ vec3 indirectLightDepth5(vec3 pos, vec3 N, vec3 V, int depth, uint seed) {
     float solidAngle; 
     return getDirectLighting(pos, N, V, seed, solidAngle) * (albedo/PI); 
 }
-indirectLightRec(indirectLightDepth4, indirectLightDepth5);
-indirectLightRec(indirectLightDepth3, indirectLightDepth4);
-indirectLightRec(indirectLightDepth2, indirectLightDepth3);
-indirectLightRec(indirectLightDepth1, indirectLightDepth2);
+indirectLightRec(indirectLightDepth1, indirectLightDepth5);
 indirectLightRec(indirectLightDepth0, indirectLightDepth1);
 
 void main()
