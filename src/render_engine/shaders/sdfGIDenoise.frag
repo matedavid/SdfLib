@@ -1,6 +1,7 @@
 #version 430
 
 uniform sampler2D colorTexture;
+uniform bool enabled;
 
 out vec4 outColor;
 
@@ -57,5 +58,12 @@ vec4 smartDeNoise(sampler2D tex, vec2 uv, float sigma, float kSigma, float thres
 
 void main()
 {
-	outColor =  smartDeNoise(colorTexture, uv, 5.0, 2.0, .100);
+    if (enabled)
+    {
+	    outColor =  smartDeNoise(colorTexture, uv, 5.0, 2.0, .100);
+    }
+    else
+    {
+	    outColor =  texture(colorTexture, uv);
+    }
 }

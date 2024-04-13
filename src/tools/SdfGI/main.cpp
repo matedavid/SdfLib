@@ -349,11 +349,7 @@ public:
         const bool cameraRotated = wnd.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
         const bool cameraMoved = wnd.isKeyPressed(GLFW_KEY_W) || wnd.isKeyPressed(GLFW_KEY_A) || wnd.isKeyPressed(GLFW_KEY_S) || wnd.isKeyPressed(GLFW_KEY_D);
 
-        const bool shouldStopIndirect = cameraRotated || cameraMoved;
-
-        if (!mUseIndirect || shouldStopIndirect)
-            mAccumulationFrame = 1;
-        else
+        if (mUseIndirect)
             mAccumulationFrame++;
 
         Scene::update(deltaTime);
@@ -476,6 +472,8 @@ public:
         {
             mDenoiseFramebuffer->bind();
 
+            mDenoiseShader->setEnabled(mUseDenoising);
+
             mScreenPlane->setShader(mDenoiseShader.get());
             mScreenPlane->draw(getMainCamera());
 
@@ -566,9 +564,11 @@ public:
 
             ImGui::Text("Global Illumination Settings");
             ImGui::Checkbox("Use Indirect", &mUseIndirect);
+            ImGui::Checkbox("Use Denoising", &mUseDenoising);
             ImGui::Text("Current frame: %d", mAccumulationFrame);
             if (ImGui::Button("Reset Accumulation"))
             {
+                mAccumulationFrame = 1;
                 mResetAccumulation = true;
             }
             ImGui::InputInt("Num Samples", &mNumSamples);
@@ -790,6 +790,7 @@ private:
 
     // Global Illumination Settings
     bool mUseIndirect = false;
+    bool mUseDenoising = false;
     int mNumSamples = 2;
     int mMaxDepth = 1;
     int mMaxRaycastIterations = 50;
@@ -800,7 +801,7 @@ private:
     glm::vec3 mLightPosition[4] =
         {
             // glm::vec3(1.0f, 2.0f, 1.0f),
-            glm::vec3(0.0f, 0.9f, 0.0f),
+            glm::vec3(0.0f, 0.8f, 0.0f),
             glm::vec3(-1.0f, 2.0f, 1.0f),
             glm::vec3(1.0f, 2.0f, -1.0f),
             glm::vec3(-1.0f, 2.0f, -1.0f)};

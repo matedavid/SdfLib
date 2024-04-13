@@ -15,9 +15,12 @@ public:
         unsigned int programId = getProgramId();
 
         mColorTextureLocation = glGetUniformLocation(programId, "colorTexture");
+        mEnabledLocation = glGetUniformLocation(programId, "enabled");
     }
 
     void setColorTexture(unsigned int colorTexture) { mColorTexture = colorTexture; }
+
+    void setEnabled(bool enabled) { mEnabled = enabled; }
 
     void bind() override
     {
@@ -25,9 +28,14 @@ public:
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, mColorTexture);
+        
+        glUniform1i(mEnabledLocation, mEnabled);
     }
 
 private:
     int mColorTextureLocation;
     unsigned int mColorTexture;
+
+    bool mEnabled = false;
+    unsigned int mEnabledLocation;
 };

@@ -1,7 +1,7 @@
 #pragma once
 
-
 #include <string>
+#include <cstdint>
 
 class Cubemap  {
   public:
