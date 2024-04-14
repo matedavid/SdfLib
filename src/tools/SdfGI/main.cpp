@@ -450,7 +450,10 @@ public:
 
         // Copy Radiance pass
         {
+            mCopyRadianceShader->setReset(mResetAccumulation);
             mCopyRadianceShader->dispatch();
+
+            if (mResetAccumulation) mResetAccumulation = false;
 
             /*
             mCopyRadianceFramebuffer->bind();
