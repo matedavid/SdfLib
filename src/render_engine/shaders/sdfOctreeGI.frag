@@ -702,42 +702,70 @@ vec3 getColor(vec3 pos, vec3 N, vec3 V)
 
 vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle) 
 {
-    // TODO: For the moment using only one light
-
     uint seedLocal = seed;
 
-    vec3 lightPosition = (worldToStartGridMatrix * vec4(lightPos[0], 1.0f)).xyz;
+    vec3 worldPos = (fragInverseWorldToStartGridMatrix * vec4(pos, 1.0)).xyz;
 
-    float distToLight = distance(lightPosition, pos);
-    vec3 colorLight = lightIntensity[0] * lightColor[0];
-
-    float cosAngle = lightRadius[0] / distToLight;
-    solidAngle = 2.0 * PI * (1.0 - cosAngle);
-
-    vec2 rangeX = vec2(lightPosition.x - lightRadius[0], lightPosition.x + lightRadius[0]);
-    vec2 rangeY = vec2(lightPosition.y - lightRadius[0], lightPosition.y + lightRadius[0]);
-    vec2 rangeZ = vec2(lightPosition.z - lightRadius[0], lightPosition.z + lightRadius[0]);
-    
-    // float pdf = solidAngle / (4.0 * PI * distToLight * distToLight);
-
+    // TODO: For the moment using only one light
     vec3 color = vec3(0.0);
-    for (int i = 0; i < numSamples; ++i)
+    for (int i = 0; i < min(1, lightNumber); ++i) 
     {
-        vec3 lightPoint = vec3(randomFloatRange(rangeX.x, rangeX.y, seedLocal, seedLocal), 
-                               randomFloatRange(rangeY.x, rangeY.y, seedLocal, seedLocal), 
-                               randomFloatRange(rangeZ.x, rangeZ.y, seedLocal, seedLocal));
-        vec3 lightDir = normalize(lightPoint - pos);
+        vec3 lightPosition = lightPos[i];
+        vec3 lightColor = lightIntensity[i] * lightColor[i];
 
-        vec3 hitPosition;
-        bool hit = raycast(pos + epsilon * N, lightDir, hitPosition);
+        // float distanceToLight = distance(lightPosition, worldPos);
 
-        if (!hit)
+        vec2 rangeX = vec2(lightPosition.x - lightRadius[i], lightPosition.x + lightRadius[i]);
+        vec2 rangeY = vec2(lightPosition.y - lightRadius[i], lightPosition.y + lightRadius[i]);
+        vec2 rangeZ = vec2(lightPosition.z - lightRadius[i], lightPosition.z + lightRadius[i]);
+
+        vec3 localColor = vec3(0.0);
+        for (int i = 0; i < numSamples; ++i)
         {
-            color += colorLight * max(dot(N, lightDir), 0.0); // / pdf;
-        } 
+            vec3 lightPoint = vec3(randomFloatRange(rangeX.x, rangeX.y, seedLocal, seedLocal), 
+                                   randomFloatRange(rangeY.x, rangeY.y, seedLocal, seedLocal), 
+                                   randomFloatRange(rangeZ.x, rangeZ.y, seedLocal, seedLocal));
+            vec3 lightDir = normalize(lightPoint - pos);
+
+            // Special raycast that checks collision with light
+            bool hit;
+            {
+                vec3 hitPosition = (worldToStartGridMatrix * vec4(worldPos, 1.0)).xyz;
+                hitPosition += epsilon * N;
+
+                float lastDistance = 1e8;
+                uint it = 0;
+
+                bool hitLight = false;
+                while (lastDistance > 1e-5 && it < maxRaycastIterations)
+                {
+                    lastDistance = map(hitPosition);
+
+                    float dist = max(lastDistance, 0.0);
+                    hitPosition += lightDir * dist;
+                    it += 1;
+
+                    vec3 p = (fragInverseWorldToStartGridMatrix * vec4(hitPosition, 1.0)).xyz;
+                    if (rangeX.x <= p.x && p.x <= rangeX.y 
+                        && rangeY.x <= p.y && p.y <= rangeY.y 
+                        && rangeZ.x <= p.z && p.z <= rangeZ.y) 
+                    {
+                        hitLight = true;
+                        break;
+                    }
+                }
+
+                hit = lastDistance <= 1e-5 && !hitLight;
+            }
+
+            if (!hit) localColor += lightColor * max(dot(N, lightDir), 0.0);
+        }
+        localColor /= float(numSamples);
+
+        color += localColor;
     }
 
-    return color / float(numSamples);
+    return color;
 }
 
 vec3 getDirectLighting(vec3 pos, vec3 N, vec3 V, uint seed, out float solidAngle)
