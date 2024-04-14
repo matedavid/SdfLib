@@ -90,12 +90,15 @@ public:
 
     const std::unique_ptr<OctreeNode> &getRoot() { return mRoot; }
     const std::vector<ShaderOctreeNode> &getShaderOctreeData() { return mShaderOctreeData; }
+    const std::vector<uint32_t> &getLeafIndices() const { return mLeafIndices; }
 
 private:
     RenderConfig mRenderConfig;
 
     std::unique_ptr<OctreeNode> mRoot;
     std::vector<ShaderOctreeNode> mShaderOctreeData;
+
+    std::vector<uint32_t> mLeafIndices;
 
     std::vector<Triangle> mTriangles;
     std::vector<glm::vec3> mVertices;

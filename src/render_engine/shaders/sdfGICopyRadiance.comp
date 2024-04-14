@@ -1,0 +1,56 @@
+#version 430 core
+
+layout (local_size_x = 128) in;
+
+uniform bool reset;
+uniform int leafIndicesSize;
+
+uint OCTREENODE_LEAF_MASK = 0x80000000;
+uint OCTREENODE_CHILDREN_MASK = 0x7FFFFFFF;
+
+struct OctreeNode 
+{
+    // 32 bits
+    // - bit 31:   isLeaf
+    // - bit 30-0: children idx
+    uint data;
+
+    vec3 bboxMin;
+    vec3 bboxMax;
+
+    vec4 color;
+    // roughness, metallic, -, -
+    vec4 material;
+
+    // radiance caching
+    vec4 readRadiance;
+    vec4 writeRadiance;
+};
+
+layout(std140, binding = 4) buffer SceneOctree 
+{
+    OctreeNode sceneData[];
+};
+
+layout (std140, binding = 5) buffer SceneOctreeLeafIndices
+{
+    uint sceneLeafIndices[];
+};
+
+void main() 
+{
+    uint idx = gl_GlobalInvocationID.x;
+
+    if (idx >= leafIndicesSize)
+        return;
+
+    uint leafIdx = sceneLeafIndices[idx];
+
+    sceneData[leafIdx].readRadiance = sceneData[leafIdx].writeRadiance;
+
+    if (reset) 
+    {
+        sceneData[leafIdx].readRadiance = vec4(0.0);
+        sceneData[leafIdx].writeRadiance = vec4(0.0);
+    }
+}

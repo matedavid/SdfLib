@@ -7,69 +7,98 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <algorithm>
+#include "tools/SdfGI/SceneOctree.h"
 
-class GICopyRadianceShader : public Shader<GICopyRadianceShader>
+class GICopyRadianceShader 
 {
 public:
-    GICopyRadianceShader(sdflib::IOctreeSdf& octreeSdf, unsigned int sceneOctreeSSBO) : 
-        Shader(SHADER_PATH + "sdfOctreeGI.vert", "", SHADER_PATH + "sdfGICopyRadiance.frag", ""), mSceneOctreeSSBO(sceneOctreeSSBO)
+    GICopyRadianceShader(std::shared_ptr<SceneOctree> octree, unsigned int sceneOctreeSSBO) : 
+        mSceneOctree(octree), mSceneOctreeSSBO(sceneOctreeSSBO)
     {
-        unsigned int mRenderProgramId = getProgramId();
+        // Compile compute shader
+        {
+            std::ifstream file(SHADER_PATH + "sdfGICopyRadiance.comp");
+            std::string shaderContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
-        worldToStartGridMatrixLocation = glGetUniformLocation(mRenderProgramId, "worldToStartGridMatrix");
-        worldToStartGridMatrix = glm::scale(glm::mat4x4(1.0f), 1.0f / octreeSdf.getGridBoundingBox().getSize()) *
-                                 glm::translate(glm::mat4x4(1.0f), -octreeSdf.getGridBoundingBox().min);
+            const char* shaderContentC = shaderContent.c_str();
 
-        normalWorldToStartGridMatrixLocation = glGetUniformLocation(mRenderProgramId, "normalWorldToStartGridMatrix");
-        normalWorldToStartGridMatrix = glm::inverseTranspose(glm::mat3(worldToStartGridMatrix));
+            unsigned int compute = glCreateShader(GL_COMPUTE_SHADER);
+            glShaderSource(compute, 1, &shaderContentC, NULL);
+            glCompileShader(compute);
 
-        startGridSizeLocation = glGetUniformLocation(mRenderProgramId, "startGridSize");
-        startGridSize = glm::vec3(octreeSdf.getStartGridSize());
+            int success;
+            glGetShaderiv(compute, GL_COMPILE_STATUS, &success);
+            if (!success) {
+                char infoLog[512];
+                glGetShaderInfoLog(compute, 512, NULL, infoLog);
+                std::cout << "-> Compute Shader error ( " << "sdfGICopyRadiance.comp" << " ):" << std::endl;
+                std::cout << infoLog << std::endl;
+            }
 
-        minBorderValueLocation = glGetUniformLocation(mRenderProgramId, "minBorderValue");
-        minBorderValue = octreeSdf.getOctreeMinBorderValue();
-        distanceScaleLocation = glGetUniformLocation(mRenderProgramId, "distanceScale");
-        distanceScale = 1.0f / octreeSdf.getGridBoundingBox().getSize().x;
+            mRenderProgramId = glCreateProgram();
+            glAttachShader(mRenderProgramId, compute);
+            glLinkProgram(mRenderProgramId);
 
-        resetAccumulationLocation = glGetUniformLocation(mRenderProgramId, "reset");
+            glGetProgramiv(mRenderProgramId, GL_LINK_STATUS, &success);
+            if (!success) {
+                char infoLog[512];
+                glGetShaderInfoLog(mRenderProgramId, 512, NULL, infoLog);
+                std::cout << "-> Link Shader error" << std::endl;
+                std::cout << infoLog << std::endl;
+            }
+
+            glDeleteShader(compute);
+        }
+
+        mLeafIndicesSize = octree->getLeafIndices().size();
+
+        glGenBuffers(1, &mLeafIndicesSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, mLeafIndicesSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, mLeafIndicesSize * sizeof(uint32_t), octree->getLeafIndices().data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, mLeafIndicesSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        constexpr int LOCAL_SIZE_X = 128;
+
+        mNumGroupsX = glm::ceil(float(mLeafIndicesSize) / float(LOCAL_SIZE_X));
+
+        std::cout << "Num work groups x: " << mNumGroupsX << " for local size: " << LOCAL_SIZE_X << " and size(): " << mLeafIndicesSize << "\n";
+
+        mResetAccumulationLocation = glGetUniformLocation(mRenderProgramId, "reset");
+        mLeafIndicesSizeLocation = glGetUniformLocation(mRenderProgramId, "leafIndicesSize");
     }
 
     void setReset(bool reset_)
     {
-        resetAccumulation = reset_;
+        mResetAccumulation = reset_;
     }
 
-    void bind() override
+    void dispatch()
     {
+        glUseProgram(mRenderProgramId);
+
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, mSceneOctreeSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, mLeafIndicesSSBO);
 
-        glUniformMatrix4fv(worldToStartGridMatrixLocation, 1, GL_FALSE, glm::value_ptr(worldToStartGridMatrix));
-        glUniformMatrix3fv(normalWorldToStartGridMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalWorldToStartGridMatrix));
-        glUniform3f(startGridSizeLocation, startGridSize.x, startGridSize.y, startGridSize.z);
-        glUniform1f(minBorderValueLocation, minBorderValue);
-        glUniform1f(distanceScaleLocation, distanceScale);
+        glUniform1i(mResetAccumulationLocation, mResetAccumulation);
+        glUniform1i(mLeafIndicesSizeLocation, mLeafIndicesSize);
 
-        glUniform1i(resetAccumulationLocation, resetAccumulation);
+        glDispatchCompute(mNumGroupsX, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
 private:
+    unsigned int mRenderProgramId;
+
+    std::shared_ptr<SceneOctree> mSceneOctree;
     unsigned int mSceneOctreeSSBO;
+    unsigned int mLeafIndicesSSBO;
 
-    glm::mat4x4 worldToStartGridMatrix;
-    unsigned int worldToStartGridMatrixLocation;
+    unsigned int mNumGroupsX;
 
-    glm::mat3 normalWorldToStartGridMatrix;
-    unsigned int normalWorldToStartGridMatrixLocation;
+    bool mResetAccumulation = false;
+    unsigned int mResetAccumulationLocation;
 
-    glm::vec3 startGridSize;
-    unsigned int startGridSizeLocation;
-
-    float minBorderValue;
-    unsigned int minBorderValueLocation;
-
-    float distanceScale;
-    unsigned int distanceScaleLocation;
-
-    bool resetAccumulation = false;
-    unsigned int resetAccumulationLocation;
+    int mLeafIndicesSize;
+    unsigned int mLeafIndicesSizeLocation;
 };

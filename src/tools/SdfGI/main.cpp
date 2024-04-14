@@ -83,14 +83,14 @@ public:
         const auto config = SceneOctree::RenderConfig{
             .maxDepth = 8,
         };
-        auto *sceneOctree = new SceneOctree(mesh, config);
+        mSceneOctree = std::make_shared<SceneOctree>(mesh, config);
         spdlog::info("Started compiling GI shader");
-        mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf, *sceneOctree);
+        mOctreeGIShader = std::make_unique<SdfOctreeGIShader>(*octreeSdf, *mSceneOctree);
         spdlog::info("Finished compiling GI shader");
-        mCopyRadianceShader = std::make_shared<GICopyRadianceShader>(*octreeSdf, mOctreeGIShader->mSceneOctreeSSBO);
+        mCopyRadianceShader = std::make_shared<GICopyRadianceShader>(mSceneOctree, mOctreeGIShader->mSceneOctreeSSBO);
 
         {
-            const auto dataSize = sceneOctree->getShaderOctreeData().size() * sizeof(ShaderOctreeNode) * 1e-6;
+            const auto dataSize = mSceneOctree->getShaderOctreeData().size() * sizeof(ShaderOctreeNode) * 1e-6;
             spdlog::info("Finished generating Scene Octree, with size {0:.2f} MB", dataSize);
         }
 
@@ -450,6 +450,9 @@ public:
 
         // Copy Radiance pass
         {
+            mCopyRadianceShader->dispatch();
+
+            /*
             mCopyRadianceFramebuffer->bind();
             glDepthFunc(GL_LEQUAL);
 
@@ -466,6 +469,7 @@ public:
 
             glDepthFunc(GL_LESS);
             mCopyRadianceFramebuffer->unbind();
+            */
         }
 
         // Denoise pass
@@ -743,6 +747,8 @@ private:
     std::shared_ptr<RenderMesh> mLightRenderer;
 
     std::unique_ptr<ColorsShader> mFlatColorShader;
+
+    std::shared_ptr<SceneOctree> mSceneOctree;
 
     // Depth pass
     std::shared_ptr<Texture> mDepthTexture;
