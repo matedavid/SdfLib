@@ -69,6 +69,11 @@ public:
         mLeafIndicesSizeLocation = glGetUniformLocation(mRenderProgramId, "leafIndicesSize");
     }
 
+    ~GICopyRadianceShader()
+    {
+        glDeleteProgram(mRenderProgramId);
+    }
+
     void setReset(bool reset_)
     {
         mResetAccumulation = reset_;

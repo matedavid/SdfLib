@@ -346,8 +346,8 @@ public:
     {
         auto &wnd = Window::getCurrentWindow();
 
-        const bool cameraRotated = wnd.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
-        const bool cameraMoved = wnd.isKeyPressed(GLFW_KEY_W) || wnd.isKeyPressed(GLFW_KEY_A) || wnd.isKeyPressed(GLFW_KEY_S) || wnd.isKeyPressed(GLFW_KEY_D);
+        // const bool cameraRotated = wnd.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
+        // const bool cameraMoved = wnd.isKeyPressed(GLFW_KEY_W) || wnd.isKeyPressed(GLFW_KEY_A) || wnd.isKeyPressed(GLFW_KEY_S) || wnd.isKeyPressed(GLFW_KEY_D);
 
         if (mUseIndirect)
             mAccumulationFrame++;
@@ -454,25 +454,6 @@ public:
             mCopyRadianceShader->dispatch();
 
             if (mResetAccumulation) mResetAccumulation = false;
-
-            /*
-            mCopyRadianceFramebuffer->bind();
-            glDepthFunc(GL_LEQUAL);
-
-            mCopyRadianceShader->bind();
-
-            mCopyRadianceShader->setReset(mResetAccumulation);
-
-            mModelRenderer->setShader(mCopyRadianceShader.get());
-            drawModel();
-
-            if (mResetAccumulation) mResetAccumulation = false;
-
-            mModelRenderer->setShader(mOctreeGIShader.get());
-
-            glDepthFunc(GL_LESS);
-            mCopyRadianceFramebuffer->unbind();
-            */
         }
 
         // Denoise pass
