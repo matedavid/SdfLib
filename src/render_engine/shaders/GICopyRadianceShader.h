@@ -50,15 +50,16 @@ public:
             glDeleteShader(compute);
         }
 
-        mLeafIndicesSize = octree->getLeafIndices().size();
+        // mLeafIndicesSize = octree->getLeafIndices().size();
+        mLeafIndicesSize = octree->getShaderOctreeData().size();
 
-        glGenBuffers(1, &mLeafIndicesSSBO);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, mLeafIndicesSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, mLeafIndicesSize * sizeof(uint32_t), octree->getLeafIndices().data(), GL_STATIC_DRAW);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, mLeafIndicesSSBO);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+        // glGenBuffers(1, &mLeafIndicesSSBO);
+        // glBindBuffer(GL_SHADER_STORAGE_BUFFER, mLeafIndicesSSBO);
+        // glBufferData(GL_SHADER_STORAGE_BUFFER, mLeafIndicesSize * sizeof(uint32_t), octree->getLeafIndices().data(), GL_STATIC_DRAW);
+        // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, mLeafIndicesSSBO);
+        // glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-        constexpr int LOCAL_SIZE_X = 128;
+        constexpr int LOCAL_SIZE_X = 64;
 
         mNumGroupsX = glm::ceil(float(mLeafIndicesSize) / float(LOCAL_SIZE_X));
 
@@ -78,7 +79,7 @@ public:
         glUseProgram(mRenderProgramId);
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, mSceneOctreeSSBO);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, mLeafIndicesSSBO);
+        // glBindBuffer(GL_SHADER_STORAGE_BUFFER, mLeafIndicesSSBO);
 
         glUniform1i(mResetAccumulationLocation, mResetAccumulation);
         glUniform1i(mLeafIndicesSizeLocation, mLeafIndicesSize);
@@ -92,7 +93,7 @@ private:
 
     std::shared_ptr<SceneOctree> mSceneOctree;
     unsigned int mSceneOctreeSSBO;
-    unsigned int mLeafIndicesSSBO;
+    // unsigned int mLeafIndicesSSBO;
 
     unsigned int mNumGroupsX;
 

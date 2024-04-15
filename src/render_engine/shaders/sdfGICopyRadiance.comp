@@ -1,6 +1,6 @@
 #version 430 core
 
-layout (local_size_x = 128) in;
+layout (local_size_x = 64) in;
 
 uniform bool reset;
 uniform int leafIndicesSize;
@@ -40,17 +40,36 @@ layout (std140, binding = 5) buffer SceneOctreeLeafIndices
 void main() 
 {
     uint idx = gl_GlobalInvocationID.x;
-
     if (idx >= leafIndicesSize)
         return;
 
-    uint leafIdx = sceneLeafIndices[idx];
+    if (!bool(sceneData[idx].data & OCTREENODE_LEAF_MASK))
+        return;
 
-    sceneData[leafIdx].readRadiance = sceneData[leafIdx].writeRadiance;
+    sceneData[idx].readRadiance = sceneData[idx].writeRadiance;
 
     if (reset) 
     {
-        sceneData[leafIdx].readRadiance = vec4(0.0);
-        sceneData[leafIdx].writeRadiance = vec4(0.0);
+        sceneData[idx].readRadiance = vec4(0.0);
+        sceneData[idx].writeRadiance = vec4(0.0);
     }
 }
+
+// void main() 
+// {
+//     uint idx = gl_GlobalInvocationID.x;
+//     if (idx >= leafIndicesSize)
+//         return;
+
+//     uint leafIdx = sceneLeafIndices[idx];
+//     if (!bool(sceneData[leafIdx].data & OCTREENODE_LEAF_MASK))
+//         return;
+
+//     sceneData[leafIdx].readRadiance = sceneData[leafIdx].writeRadiance;
+
+//     if (reset) 
+//     {
+//         sceneData[leafIdx].readRadiance = vec4(0.0);
+//         sceneData[leafIdx].writeRadiance = vec4(0.0);
+//     }
+// }
