@@ -416,8 +416,8 @@ float softshadow( in vec3 ro, in vec3 rd, float mint, float maxt, float w )
     return 0.25*(1.0+res)*(1.0+res)*(2.0-res);
 }
 
-uint OCTREENODE_LEAF_MASK = 0x80000000;
-uint OCTREENODE_CHILDREN_MASK = 0x7FFFFFFF;
+uint OCTREENODE_LEAF_MASK     = 0xC0000000; // 0x80000000;
+uint OCTREENODE_CHILDREN_MASK = 0x3FFFFFFF; // 0x7FFFFFFF;
 
 struct Material 
 {
@@ -432,8 +432,8 @@ struct Material
 struct OctreeNode 
 {
     // 32 bits
-    // - bit 31:   isLeaf
-    // - bit 30-0: children idx
+    // - bit 31,30:   node type
+    // - bit 29-0:    children idx
     uint data;
 
     vec3 bboxMin;
@@ -452,6 +452,25 @@ layout(std140, binding = 4) buffer SceneOctree
 {
     OctreeNode sceneData[];
 };
+
+#define NODE_GREY  0
+#define NODE_BLACK 1
+#define NODE_WHITE 2
+
+bool nodeIsBlack(uint data)
+{
+    return ((data & OCTREENODE_LEAF_MASK) >> 30) == NODE_BLACK;
+}
+
+bool nodeIsWhite(uint data)
+{
+    return ((data & OCTREENODE_LEAF_MASK) >> 30) == NODE_WHITE;
+}
+
+bool nodeIsLeaf(uint data)
+{
+    return nodeIsBlack(data) || nodeIsWhite(data);
+}
 
 Material getSceneOctreeColor(vec3 gridPoint)
 {
@@ -472,7 +491,7 @@ Material getSceneOctreeColor(vec3 gridPoint)
     }
 
     uint prevIdx = idx;
-    while (!bool(sceneData[idx].data & OCTREENODE_LEAF_MASK))
+    while (!nodeIsLeaf(sceneData[idx].data))
     {
         OctreeNode node = sceneData[idx];
 
@@ -504,6 +523,13 @@ Material getSceneOctreeColor(vec3 gridPoint)
             return mat;
         }
     }
+
+    if (nodeIsWhite(sceneData[idx].data))
+    {
+        Material mat;
+        mat.idx = -1;
+        return mat;
+    }
     
     Material mat;
     mat.albedo = sceneData[idx].color.rgb;
@@ -533,7 +559,7 @@ vec4 sampleCurrentRadiance(Material mat, vec3 gridPos)
         if (childrenIdx + i == mat.idx) continue;
 
         OctreeNode child = sceneData[childrenIdx + i];
-        if (bool(child.data & OCTREENODE_LEAF_MASK))
+        if (nodeIsBlack(child.data))
         {
             if (child.readRadiance.w < 40.0) continue;
 

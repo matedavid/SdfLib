@@ -17,9 +17,9 @@ struct OctreeNode
 {
     enum class Type
     {
-        Black, // Contains triangles, last depth
-        White, // Empty, last depth
-        Gray   // Contains triangles, not last depth
+        Gray  = 0, // Contains triangles, not last depth
+        Black = 1, // Contains triangles, last depth
+        White = 2, // Empty, last depth
     };
 
     glm::vec3 center;
@@ -34,14 +34,14 @@ struct OctreeNode
     std::array<std::unique_ptr<OctreeNode>, 8> children;
 };
 
-constexpr uint32_t SHADER_LEAF_MASK = 0x80000000;
-constexpr uint32_t SHADER_CHILD_MASK = 0x7fffffff;
+constexpr uint32_t SHADER_LEAF_MASK  = 0xC0000000; // 0x80000000;
+constexpr uint32_t SHADER_CHILD_MASK = 0x3FFFFFFF; // 0x7fffffff;
 
 struct ShaderOctreeNode
 {
     // 32 bits
-    // - bit 31:   isLeaf
-    // - bit 30-0: children idx
+    // - bit 31,30: node type
+    // - bit 29-0:  children idx
     uint32_t data = 0; float _padding1[3];
 
     // Bbox
@@ -56,9 +56,9 @@ struct ShaderOctreeNode
     glm::vec4 readRadiance{0.0f};
     glm::vec4 writeRadiance{0.0f};
 
-    void setIsLeaf()
+    void setNodeType(OctreeNode::Type type)
     {
-        data |= SHADER_LEAF_MASK;
+        data |= (static_cast<uint32_t>(type) << 30) & SHADER_LEAF_MASK;
     }
 
     bool getIsLeaf() const

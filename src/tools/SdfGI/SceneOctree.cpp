@@ -231,11 +231,12 @@ uint32_t SceneOctree::generateShaderOctreeData(const std::unique_ptr<OctreeNode>
     for (size_t i = 0; i < 8; ++i) 
     {
         const auto& child = node->children[i];
+        mShaderOctreeData[nodeIdx+i].setNodeType(child->type);
 
         if (child->type == OctreeNode::Type::Black)
         {
             const auto mat = child->material;
-            mShaderOctreeData[nodeIdx+i].setIsLeaf();
+            // mShaderOctreeData[nodeIdx+i].setIsLeaf();
 
             mShaderOctreeData[nodeIdx+i].color = glm::vec4(mat.albedo, 1.0f);
             mShaderOctreeData[nodeIdx+i].materialProperties = glm::vec4(mat.roughness, mat.metallic, 0.0f, 0.0f);
@@ -244,7 +245,7 @@ uint32_t SceneOctree::generateShaderOctreeData(const std::unique_ptr<OctreeNode>
         }
         else if (child->type == OctreeNode::Type::White)
         {
-            mShaderOctreeData[nodeIdx+i].setIsLeaf();
+            // mShaderOctreeData[nodeIdx+i].setIsLeaf();
 
             mShaderOctreeData[nodeIdx+i].color = glm::vec4(0.0f);
             mShaderOctreeData[nodeIdx+i].materialProperties = glm::vec4(0.0f);
