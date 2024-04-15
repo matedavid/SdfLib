@@ -52,9 +52,9 @@ struct ShaderOctreeNode
     // roughness, metallic, -, -
     glm::vec4 materialProperties{};
 
-    // radiance caching
-    glm::vec4 readRadiance{0.0f};
-    glm::vec4 writeRadiance{0.0f};
+    // radiance caching (orientations in order: -x, x, -y, y, -z, z)
+    glm::vec4 readRadiance[6]{};
+    glm::vec4 writeRadiance[6]{};
 
     void setNodeType(OctreeNode::Type type)
     {
