@@ -481,6 +481,10 @@ public:
 
             mDenoiseShader->setEnabled(mUseDenoising);
 
+            mDenoiseShader->setSigma(mDenoiseSigma);
+            mDenoiseShader->setkSigma(mDenoisekSigma);
+            mDenoiseShader->setThreshold(mDenoiseThreshold);
+
             mScreenPlane->setShader(mDenoiseShader.get());
             mScreenPlane->draw(getMainCamera());
 
@@ -583,6 +587,12 @@ public:
             ImGui::InputInt("Max Raycast Iterations", &mMaxRaycastIterations);
             ImGui::Checkbox("Use Direct Sphere Sampling", &mUseDirectSphereSampling);
 
+            ImGui::Text("Denoising options");
+            ImGui::InputFloat("Sigma", &mDenoiseSigma);
+            ImGui::InputFloat("kSigma", &mDenoisekSigma);
+            ImGui::InputFloat("Threshold", &mDenoiseThreshold);
+
+            ImGui::Text("Skybox options");
             ImGui::Checkbox("Use Cubemap Skybox", &mUseCubemapSkybox);
             ImGui::ColorEdit3("Skybox color", reinterpret_cast<float *>(&mSkyboxColor[0]));
 
@@ -804,6 +814,11 @@ private:
     int mMaxDepth = 1;
     int mMaxRaycastIterations = 50;
     bool mUseDirectSphereSampling = false;
+    
+    // Denoise options
+    float mDenoiseSigma = 5.0;
+    float mDenoisekSigma = 2.0;
+    float mDenoiseThreshold = 0.1;
 
     // Lighting
     int mLightNumber = 1;

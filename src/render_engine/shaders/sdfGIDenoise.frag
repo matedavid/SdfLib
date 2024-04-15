@@ -3,6 +3,10 @@
 uniform sampler2D colorTexture;
 uniform bool enabled;
 
+uniform float uSigma;
+uniform float ukSigma;
+uniform float uThreshold;
+
 out vec4 outColor;
 
 in vec2 uv;
@@ -60,7 +64,7 @@ void main()
 {
     if (enabled)
     {
-	    outColor =  smartDeNoise(colorTexture, uv, 5.0, 2.0, .100);
+	    outColor =  smartDeNoise(colorTexture, uv, uSigma, ukSigma, uThreshold);
     }
     else
     {
