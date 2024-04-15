@@ -541,7 +541,7 @@ Material getSceneOctreeColor(vec3 gridPoint)
     return mat;
 }
 
-#define MIN_SAMPLES_RADIANCE 125.0
+#define MIN_SAMPLES_RADIANCE 75.0
 
 uint getRadianceClosestOrientation(vec3 direction)
 {
