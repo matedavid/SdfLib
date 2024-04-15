@@ -541,12 +541,15 @@ Material getSceneOctreeColor(vec3 gridPoint)
     return mat;
 }
 
+#define MIN_SAMPLES_RADIANCE 75.0
+
 vec4 sampleCurrentRadiance(Material mat, vec3 gridPos)
 {
     if (mat.idx == -1) return vec4(0.0);
-    vec3 pos = (fragInverseWorldToStartGridMatrix * vec4(gridPos, 1.0)).xyz;
 
     OctreeNode node = sceneData[mat.idx];
+
+    /*
     OctreeNode parentNode = sceneData[mat.parentIdx];
 
     uint childrenIdx = parentNode.data & OCTREENODE_CHILDREN_MASK;
@@ -561,7 +564,7 @@ vec4 sampleCurrentRadiance(Material mat, vec3 gridPos)
         OctreeNode child = sceneData[childrenIdx + i];
         if (nodeIsBlack(child.data))
         {
-            if (child.readRadiance.w < 40.0) continue;
+            if (child.readRadiance.w < MIN_SAMPLES_RADIANCE) continue;
 
             radiance += child.readRadiance.rgb;
             sumWeights += 1.0;
@@ -569,8 +572,8 @@ vec4 sampleCurrentRadiance(Material mat, vec3 gridPos)
     }
 
     return vec4(radiance / float(sumWeights), node.readRadiance.w);
+    */
 
-    /*
     vec3 directions[] = {
         vec3(1.0, 0.0, 0.0),
         vec3(-1.0, 0.0, 0.0),
@@ -581,29 +584,24 @@ vec4 sampleCurrentRadiance(Material mat, vec3 gridPos)
     };
 
     vec3 center = (node.bboxMin + node.bboxMax) * 0.5;
-    float size = length(node.bboxMax - node.bboxMin);
+    float size = (node.bboxMax - node.bboxMin).x;
 
     vec3 radiance = node.readRadiance.rgb;
     float sumWeights = 1.0;
 
     for (int i = 0; i < 6; ++i) {
-        vec3 direction = directions[i];
-        vec3 neighborPos = center + direction * size;
+        vec3 neighborPos = center + directions[i] * size;
         vec3 neighborGridPos = (worldToStartGridMatrix * vec4(neighborPos, 1.0)).xyz;
-
-        // float dist = max(distance(neighborPos, pos), 1.0);
-        // float weight = 1.0 / dist;
 
         int neighborIdx = getSceneOctreeColor(neighborGridPos).idx;
         if (neighborIdx == -1) continue;
-        if (sceneData[neighborIdx].readRadiance.w < 40.0) continue;
+        if (sceneData[neighborIdx].readRadiance.w < MIN_SAMPLES_RADIANCE) continue;
 
         radiance += sceneData[neighborIdx].readRadiance.rgb;
         sumWeights += 1.0;
     }
 
     return vec4(radiance / sumWeights, node.readRadiance.w);
-    */
 }
 
 uint pcg_hash(uint seed)
