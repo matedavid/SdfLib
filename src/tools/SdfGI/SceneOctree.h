@@ -83,10 +83,13 @@ public:
     struct RenderConfig
     {
         int maxDepth;
+        int startDepth;
     };
 
     SceneOctree(const sdflib::Mesh &mesh, RenderConfig config);
     ~SceneOctree() = default;
+
+    [[nodiscard]] int getStartGridSize() { return std::exp2(mRenderConfig.startDepth); }
 
     const std::unique_ptr<OctreeNode> &getRoot() { return mRoot; }
     const std::vector<ShaderOctreeNode> &getShaderOctreeData() { return mShaderOctreeData; }
@@ -106,5 +109,5 @@ private:
     void renderNode(std::unique_ptr<OctreeNode> &node, const sdflib::Mesh &mesh);
     void slowTriangleIntersectionTest(sdflib::BoundingBox bbox, const std::vector<size_t> &triangles, std::vector<size_t> &outTriangles);
 
-    uint32_t generateShaderOctreeData(const std::unique_ptr<OctreeNode> &node);
+    uint32_t generateShaderOctreeData(const OctreeNode* node);
 };

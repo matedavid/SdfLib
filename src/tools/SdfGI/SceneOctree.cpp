@@ -4,9 +4,16 @@
 #include <iostream>
 #include <stack>
 #include <queue>
+#include <algorithm>
+#include <ranges>
+
+#include <glm/gtx/string_cast.hpp>
 
 SceneOctree::SceneOctree(const sdflib::Mesh &mesh, RenderConfig config) : mRenderConfig(config)
 {
+    mRenderConfig.maxDepth = std::max(1, mRenderConfig.maxDepth);
+    mRenderConfig.startDepth = std::max(0, mRenderConfig.startDepth);
+
     mVertices = mesh.getVertices();
 
     mTriangles = std::vector<Triangle>();
@@ -21,7 +28,12 @@ SceneOctree::SceneOctree(const sdflib::Mesh &mesh, RenderConfig config) : mRende
         mTriangles.push_back(t);
     }
 
-    const auto bbox = mesh.getBoundingBox();
+    auto bbox = mesh.getBoundingBox();
+
+    // Add a bit of margin the same way the sdf does (20 %)
+    constexpr float margin = 20.0f / 100.0f;
+    bbox.addMargin(margin * glm::max(glm::max(bbox.getSize().x, bbox.getSize().y), bbox.getSize().z));
+
     const auto maxSize = std::max({bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z});
 
     const auto center = (bbox.min + bbox.max) / 2.0f;
@@ -45,20 +57,56 @@ SceneOctree::SceneOctree(const sdflib::Mesh &mesh, RenderConfig config) : mRende
 
     // Create ShaderOctreeNode array
     {
-        const auto& node = mRoot;
-        assert(node->type == OctreeNode::Type::Gray);
+        // Get nodes at depth == startDepth
+        std::vector<OctreeNode*> startDepthNodes;
 
-        ShaderOctreeNode shaderNode{};
-        shaderNode.min = node->center - glm::vec3(node->halfSize);
-        shaderNode.max = node->center + glm::vec3(node->halfSize);
-        // shaderNode.ref = node.get();
+        std::queue<OctreeNode*> nodes;
+        nodes.push(mRoot.get());
 
-        mShaderOctreeData.push_back(shaderNode);
+        while (!nodes.empty()) {
+            auto* n = nodes.front();
+            nodes.pop();
 
-        const uint32_t firstChild = generateShaderOctreeData(mRoot);
-        assert(firstChild == 1);
+            if (n->depth < mRenderConfig.startDepth) 
+            {
+                for (size_t i = 0; i < 8; ++i) 
+                {
+                    auto* c = n->children[i].get();
+                    nodes.push(c);
+                }
+            }
+            else if (n->depth == mRenderConfig.startDepth) 
+            {
+                startDepthNodes.push_back(n);
+            }
+        }
 
-        mShaderOctreeData[0].setIndex(firstChild); 
+        std::sort(startDepthNodes.begin(), startDepthNodes.end(), [](OctreeNode* a, OctreeNode* b) {
+            if (glm::abs(a->center.y - b->center.y) >= std::numeric_limits<float>::epsilon()) return a->center.y < b->center.y;
+            if (glm::abs(a->center.z - b->center.z) >= std::numeric_limits<float>::epsilon()) return a->center.z < b->center.z;
+
+            return a->center.x < b->center.x;
+        });
+
+        // Create shader octree data
+        for (size_t i = 0; i < startDepthNodes.size(); ++i)
+        {
+            auto* n = startDepthNodes[i];
+            assert(n->type == OctreeNode::Type::Gray);
+
+            ShaderOctreeNode shaderNode{};
+            shaderNode.min = n->center - glm::vec3(n->halfSize);
+            shaderNode.max = n->center + glm::vec3(n->halfSize);
+            // shaderNode.ref = n;
+
+            mShaderOctreeData.push_back(shaderNode);
+        }
+
+        for (size_t i = 0; i < startDepthNodes.size(); ++i)
+        {
+            const uint32_t childIdx = generateShaderOctreeData(startDepthNodes[i]);
+            mShaderOctreeData[i].setIndex(childIdx); 
+        }
     }
 
     // Check shader octree is correct
@@ -175,6 +223,10 @@ void SceneOctree::renderNode(std::unique_ptr<OctreeNode> &node, const sdflib::Me
                                       ? OctreeNode::Type::White
                                       : OctreeNode::Type::Gray;
 
+        // If current depth is less than start depth, keep creating nodes either way
+        if (node->depth <= mRenderConfig.startDepth) 
+            node->children[i]->type = OctreeNode::Type::Gray;
+
         if (node->children[i]->type == OctreeNode::Type::Gray)
             renderNode(node->children[i], mesh);
     }
@@ -212,7 +264,7 @@ void SceneOctree::slowTriangleIntersectionTest(sdflib::BoundingBox bbox, const s
     }
 }
 
-uint32_t SceneOctree::generateShaderOctreeData(const std::unique_ptr<OctreeNode> &node)
+uint32_t SceneOctree::generateShaderOctreeData(const OctreeNode* node)
 {
     const uint32_t nodeIdx = mShaderOctreeData.size();
 
@@ -236,23 +288,18 @@ uint32_t SceneOctree::generateShaderOctreeData(const std::unique_ptr<OctreeNode>
         if (child->type == OctreeNode::Type::Black)
         {
             const auto mat = child->material;
-            // mShaderOctreeData[nodeIdx+i].setIsLeaf();
 
             mShaderOctreeData[nodeIdx+i].color = glm::vec4(mat.albedo, 1.0f);
             mShaderOctreeData[nodeIdx+i].materialProperties = glm::vec4(mat.roughness, mat.metallic, 0.0f, 0.0f);
-
-            // mLeafIndices.push_back(nodeIdx+i);
         }
         else if (child->type == OctreeNode::Type::White)
         {
-            // mShaderOctreeData[nodeIdx+i].setIsLeaf();
-
             mShaderOctreeData[nodeIdx+i].color = glm::vec4(0.0f);
             mShaderOctreeData[nodeIdx+i].materialProperties = glm::vec4(0.0f);
         }
         else if (child->type == OctreeNode::Type::Gray)
         {
-            const uint32_t childIdx = generateShaderOctreeData(child);
+            const uint32_t childIdx = generateShaderOctreeData(child.get());
             mShaderOctreeData[nodeIdx+i].setIndex(childIdx);
 
             assert(mShaderOctreeData[nodeIdx+i].getIndex() == childIdx);

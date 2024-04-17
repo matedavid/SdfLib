@@ -416,8 +416,8 @@ float softshadow( in vec3 ro, in vec3 rd, float mint, float maxt, float w )
     return 0.25*(1.0+res)*(1.0+res)*(2.0-res);
 }
 
-uint OCTREENODE_LEAF_MASK     = 0xC0000000; // 0x80000000;
-uint OCTREENODE_CHILDREN_MASK = 0x3FFFFFFF; // 0x7FFFFFFF;
+uint OCTREENODE_LEAF_MASK     = 0xC0000000;
+uint OCTREENODE_CHILDREN_MASK = 0x3FFFFFFF;
 
 struct Material 
 {
@@ -426,7 +426,6 @@ struct Material
     float metallic;
 
     int idx;
-    int parentIdx;
 };
 
 struct OctreeNode 
@@ -453,6 +452,8 @@ layout(std140, binding = 4) buffer SceneOctree
     OctreeNode sceneData[];
 };
 
+uniform ivec3 sceneOctreeStartGridSize;
+
 #define NODE_GREY  0
 #define NODE_BLACK 1
 #define NODE_WHITE 2
@@ -474,6 +475,62 @@ bool nodeIsLeaf(uint data)
 
 Material getSceneOctreeColor(vec3 gridPoint)
 {
+    vec3 fracPart = gridPoint * sceneOctreeStartGridSize;
+    ivec3 arrayPos = ivec3(floor(fracPart));
+
+    if (arrayPos.x < 0 || arrayPos.y < 0 || arrayPos.z < 0
+        || arrayPos.x >= sceneOctreeStartGridSize.x || arrayPos.y >= sceneOctreeStartGridSize.y || arrayPos.z >= sceneOctreeStartGridSize.z)
+    {
+        Material mat;
+        mat.albedo = vec3(0.0, 1.0, 1.0);
+        mat.roughness = 0.0;
+        mat.metallic = 0.0;
+        mat.idx = -1;
+
+        return mat; 
+    }
+
+    fracPart = fract(fracPart);
+
+    uint idx = arrayPos.y * uint(sceneOctreeStartGridSize.z * sceneOctreeStartGridSize.x) +
+               arrayPos.z * uint(sceneOctreeStartGridSize.x) +
+               arrayPos.x;
+
+    OctreeNode currentNode = sceneData[idx];
+
+    int depth = 0;
+    uint prevIdx = idx;
+    while(!nodeIsLeaf(currentNode.data))
+    {
+        uint childIdx = (roundFloat(fracPart.y) << 2) + 
+                        (roundFloat(fracPart.z) << 1) + 
+                        roundFloat(fracPart.x);
+
+
+        idx = (currentNode.data & OCTREENODE_CHILDREN_MASK) + childIdx;
+
+        currentNode = sceneData[idx];
+        fracPart = fract(2.0 * fracPart);
+    }
+
+    if (nodeIsWhite(currentNode.data))
+    {
+        // Should not happen :(
+        Material mat;
+        mat.albedo = vec3(1.0, 0.0, 1.0);
+        mat.idx = -1;
+        return mat;
+    }
+
+    Material mat;
+    mat.albedo = currentNode.color.rgb;
+    mat.roughness = currentNode.material.x;
+    mat.metallic = currentNode.material.y;
+    mat.idx = int(idx);
+
+    return mat;
+
+    /*
     vec3 point = (fragInverseWorldToStartGridMatrix * vec4(gridPoint, 1.0)).xyz;
 
     uint idx = 0;
@@ -523,22 +580,7 @@ Material getSceneOctreeColor(vec3 gridPoint)
             return mat;
         }
     }
-
-    if (nodeIsWhite(sceneData[idx].data))
-    {
-        Material mat;
-        mat.idx = -1;
-        return mat;
-    }
-    
-    Material mat;
-    mat.albedo = sceneData[idx].color.rgb;
-    mat.roughness = sceneData[idx].material.x;
-    mat.metallic = sceneData[idx].material.y;
-    mat.idx = int(idx);
-    mat.parentIdx = int(prevIdx);
-
-    return mat;
+    */
 }
 
 #define MIN_SAMPLES_RADIANCE 75.0

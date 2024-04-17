@@ -82,6 +82,7 @@ public:
         // Load Scene octree
         const auto config = SceneOctree::RenderConfig{
             .maxDepth = 8,
+            .startDepth = 4,
         };
         mSceneOctree = std::make_shared<SceneOctree>(mesh, config);
         spdlog::info("Started compiling GI shader");
