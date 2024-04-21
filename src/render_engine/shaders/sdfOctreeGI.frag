@@ -646,16 +646,21 @@ vec4 sampleCurrentRadiance(Material mat, vec3 gridPos, vec3 N)
     vec3 radiance = node.readRadiance[orientationIdx].rgb;
     float sumWeights = 1.0;
 
-    for (int i = 0; i < 6; ++i) {
-        vec3 neighborPos = center + directions[i] * size;
-        vec3 neighborGridPos = (worldToStartGridMatrix * vec4(neighborPos, 1.0)).xyz;
+    // for (int i = 0; i < 6; ++i) {
+    for (int x = -1; x <= 1; ++x) {
+        for (int y = -1; y <= 1; ++y) {
+            for (int z = -1; z <= 1; ++z) {
+                vec3 neighborPos = center + vec3(x, y, z) * size;
+                vec3 neighborGridPos = (worldToStartGridMatrix * vec4(neighborPos, 1.0)).xyz;
 
-        int neighborIdx = getSceneOctreeColor(neighborGridPos).idx;
-        if (neighborIdx == -1) continue;
-        if (sceneData[neighborIdx].readRadiance[orientationIdx].w < MIN_SAMPLES_RADIANCE) continue;
+                int neighborIdx = getSceneOctreeColor(neighborGridPos).idx;
+                if (neighborIdx == -1) continue;
+                if (sceneData[neighborIdx].readRadiance[orientationIdx].w < MIN_SAMPLES_RADIANCE) continue;
 
-        radiance += sceneData[neighborIdx].readRadiance[orientationIdx].rgb;
-        sumWeights += 1.0;
+                radiance += sceneData[neighborIdx].readRadiance[orientationIdx].rgb;
+                sumWeights += 1.0;
+            }
+        }
     }
 
     return vec4(radiance / sumWeights, node.readRadiance[orientationIdx].w);
