@@ -450,6 +450,7 @@ public:
         }
 
         // Copy Radiance pass
+        if (mAccumulate || mResetAccumulation) 
         {
             mCopyRadianceShader->setReset(mResetAccumulation);
             mCopyRadianceShader->dispatch();
@@ -558,6 +559,7 @@ public:
             ImGui::Text("Global Illumination Settings");
             ImGui::Checkbox("Use Indirect", &mUseIndirect);
             ImGui::Checkbox("Use Denoising", &mUseDenoising);
+            ImGui::Checkbox("Accumulate", &mAccumulate);
             ImGui::Text("Current frame: %d", mAccumulationFrame);
             if (ImGui::Button("Reset Accumulation"))
             {
@@ -792,6 +794,7 @@ private:
     // Global Illumination Settings
     bool mUseIndirect = false;
     bool mUseDenoising = false;
+    bool mAccumulate = true;
     int mNumSamples = 2;
     int mMaxDepth = 1;
     int mMaxRaycastIterations = 50;

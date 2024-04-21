@@ -51,19 +51,18 @@ layout(std140, binding = 4) buffer SceneOctree
     OctreeNode sceneData[];
 };
 
-layout (std140, binding = 5) buffer SceneOctreeLeafIndices
+layout (std430, binding = 5) buffer SceneOctreeLeafIndices
 {
     uint sceneLeafIndices[];
 };
 
 void main() 
 {
-    uint idx = gl_GlobalInvocationID.x;
-    if (idx >= leafIndicesSize)
+    uint invocationIdx = gl_GlobalInvocationID.x;
+    if (invocationIdx >= leafIndicesSize)
         return;
 
-    if (!nodeIsLeaf(sceneData[idx].data))
-        return;
+    uint idx = sceneLeafIndices[invocationIdx];
 
     for (int i = 0; i < 6; ++i) 
     {
