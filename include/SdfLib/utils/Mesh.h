@@ -72,8 +72,8 @@ struct BoundingBox
 struct MaterialProperties
 {
     glm::vec3 albedo{};
-    float roughness{0.5f};
-    float metallic{0.5f};
+    float roughness{};
+    float metallic{};
 };
 
 class Mesh

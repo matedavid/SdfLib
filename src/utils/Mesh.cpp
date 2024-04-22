@@ -64,6 +64,8 @@ Mesh::Mesh(std::string filePath)
         const auto material = scene->mMaterials[mesh->mMaterialIndex];
 
         MaterialProperties props{};
+        props.metallic = 0.5f;
+        props.roughness = 0.5f;
 
         aiColor3D aiColor;
         if (material->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor) == aiReturn_SUCCESS)

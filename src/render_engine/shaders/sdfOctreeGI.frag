@@ -766,9 +766,9 @@ vec3 getColor(vec3 pos, vec3 N, vec3 V)
         vec3 radiance = sunColor * intensity;
         
         // Cook-torrance brdf
-        float NDF = DistributionGGX(N, H, mat.roughness);        
-        float G = GeometrySmith(N, V, L, mat.roughness);      
-        vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);       
+        float NDF = DistributionGGX(N, H, mat.roughness);
+        float G = GeometrySmith(N, V, L, mat.roughness);
+        vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
         
         vec3 kS = F;
         vec3 kD = vec3(1.0) - kS;

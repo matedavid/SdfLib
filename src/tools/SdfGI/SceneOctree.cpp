@@ -146,6 +146,11 @@ void SceneOctree::renderNode(std::unique_ptr<OctreeNode> &node, const sdflib::Me
         // Set node material
         {
             node->material = sdflib::MaterialProperties{};
+
+            node->material.albedo = glm::vec3{};
+            node->material.roughness = 0.0f;
+            node->material.metallic = 0.0f;
+
             for (const auto &ti : node->triangles)
             {
                 const auto mat =  mesh.getMaterialPerTriangle()[ti];
