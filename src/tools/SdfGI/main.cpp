@@ -450,12 +450,13 @@ public:
         }
 
         // Copy Radiance pass
-        if (mAccumulate || mResetAccumulation) 
+        if (mAccumulate || mResetAccumulation)
         {
             mCopyRadianceShader->setReset(mResetAccumulation);
             mCopyRadianceShader->dispatch();
 
-            if (mResetAccumulation) mResetAccumulation = false;
+            if (mResetAccumulation)
+                mResetAccumulation = false;
         }
 
         // Denoise pass
@@ -771,7 +772,7 @@ private:
     std::shared_ptr<GICopyRadianceShader> mCopyRadianceShader;
     bool mResetAccumulation = false;
 
-    // Denoise 
+    // Denoise
     std::shared_ptr<Framebuffer> mDenoiseFramebuffer;
     std::shared_ptr<GIDenoiseShader> mDenoiseShader;
 
@@ -799,7 +800,7 @@ private:
     int mMaxDepth = 1;
     int mMaxRaycastIterations = 50;
     bool mUseDirectSphereSampling = false;
-    
+
     // Denoise options
     float mDenoiseSigma = 5.0;
     float mDenoisekSigma = 2.0;
