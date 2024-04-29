@@ -790,13 +790,10 @@ vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle
 {
     uint seedLocal = seed;
 
-    vec3 worldPos = (fragInverseWorldToStartGridMatrix * vec4(pos, 1.0)).xyz;
-
-    // TODO: For the moment using only one light
     vec3 color = vec3(0.0);
-    for (int i = 0; i < min(1, lightNumber); ++i) 
+    for (int i = 0; i < lightNumber; ++i) 
     {
-        vec3 lightPosition = lightPos[i];
+        vec3 lightPosition = (worldToStartGridMatrix * vec4(lightPos[i], 1.0)).xyz;
         vec3 lightColor = lightIntensity[i] * lightColor[i];
 
         // float distanceToLight = distance(lightPosition, worldPos);
@@ -813,36 +810,8 @@ vec3 sphereSamplingDirectLight(vec3 pos, vec3 N, uint seed, out float solidAngle
                                    randomFloatRange(rangeZ.x, rangeZ.y, seedLocal, seedLocal));
             vec3 lightDir = normalize(lightPoint - pos);
 
-            // Special raycast that checks collision with light
-            bool hit;
-            {
-                vec3 hitPosition = (worldToStartGridMatrix * vec4(worldPos, 1.0)).xyz;
-                hitPosition += epsilon * N;
-
-                float lastDistance = 1e8;
-                uint it = 0;
-
-                bool hitLight = false;
-                while (lastDistance > 1e-5 && it < maxRaycastIterations)
-                {
-                    lastDistance = map(hitPosition);
-
-                    float dist = max(lastDistance, 0.0);
-                    hitPosition += lightDir * dist;
-                    it += 1;
-
-                    vec3 p = (fragInverseWorldToStartGridMatrix * vec4(hitPosition, 1.0)).xyz;
-                    if (rangeX.x <= p.x && p.x <= rangeX.y 
-                        && rangeY.x <= p.y && p.y <= rangeY.y 
-                        && rangeZ.x <= p.z && p.z <= rangeZ.y) 
-                    {
-                        hitLight = true;
-                        break;
-                    }
-                }
-
-                hit = lastDistance <= 1e-5 && !hitLight;
-            }
+            vec3 hitPosition;
+            bool hit = raycast(pos + epsilon * N, lightDir, hitPosition);
 
             if (!hit) localColor += lightColor * max(dot(N, lightDir), 0.0);
         }
