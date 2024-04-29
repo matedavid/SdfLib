@@ -10,6 +10,7 @@
 #include <spdlog/spdlog.h>
 #include <args.hxx>
 #include <imgui.h>
+#include <ImGuizmo.h>
 
 #include <filesystem>
 
@@ -388,6 +389,9 @@ public:
     bool mDrawGui = true;
     virtual void draw() override
     {
+        ImGuiIO& io = ImGui::GetIO();
+    	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+
         // Depth only pass
         {
             glDepthMask(GL_TRUE);
@@ -529,6 +533,16 @@ public:
 
             if (mDrawGui)
                 drawGui();
+
+            // Draw light Gizmo
+            for (size_t i = 0; i < mLightNumber; ++i) {
+                auto transform = glm::translate(glm::mat4(1.0), mLightPosition[0]);
+                ImGuizmo::Manipulate(glm::value_ptr(getMainCamera()->getViewMatrix()), glm::value_ptr(getMainCamera()->getProjectionMatrix()), 
+                    ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::LOCAL, glm::value_ptr(transform));
+
+                mLightPosition[i] = glm::vec3(transform[3]);
+            }
+
             Scene::draw();
 
             glEnable(GL_DEPTH_TEST);
