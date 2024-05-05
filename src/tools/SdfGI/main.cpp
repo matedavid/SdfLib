@@ -285,55 +285,6 @@ public:
             assert(mDenoiseFramebuffer->bake());
         }
 
-        /*
-        // Accumulation
-        {
-            mAccumulationTexture = std::make_shared<Texture>(Texture::Description{
-                .width = width,
-                .height = height,
-                .internalFormat = GL_RGB32F,
-                .format = GL_RGB,
-                .pixelDataType = GL_FLOAT,
-            });
-
-            mResultTexture = std::make_shared<Texture>(Texture::Description{
-                .width = width,
-                .height = height,
-                .internalFormat = GL_RGB32F,
-                .format = GL_RGB,
-                .pixelDataType = GL_FLOAT,
-            });
-
-            mAccumulationFramebuffer = std::make_shared<Framebuffer>();
-            mAccumulationFramebuffer->bind();
-
-            mAccumulationFramebuffer->attach(*mResultTexture, GL_COLOR_ATTACHMENT0);
-
-            mAccumulationFramebuffer->unbind();
-
-            assert(mAccumulationFramebuffer->bake());
-
-            mGIAccumulationShader = std::make_shared<GIAccumulationShader>();
-            mGIAccumulationShader->setColorTexture(mColorTexture->id());
-            mGIAccumulationShader->setAccumulationTexture(mAccumulationTexture->id());
-        }
-
-        // Save accumulation
-        {
-            mAccumulationSaveFramebuffer = std::make_shared<Framebuffer>();
-            mAccumulationSaveFramebuffer->bind();
-
-            mAccumulationSaveFramebuffer->attach(*mAccumulationTexture, GL_COLOR_ATTACHMENT0);
-
-            mAccumulationSaveFramebuffer->unbind();
-
-            assert(mAccumulationSaveFramebuffer->bake());
-
-            mAccumulationSaveShader = std::make_unique<ScreenPlaneShader>();
-            mAccumulationSaveShader->setInputTexture(mResultTexture->id());
-        }
-        */
-
         // Present
         {
             mScreenPresentShader = std::make_unique<GIScreenPresentShader>();
@@ -479,45 +430,6 @@ public:
             glEnable(GL_DEPTH_TEST);
             mDenoiseFramebuffer->unbind();
         }
-
-        /*
-        // Reset accumulation texture if necessary
-        if (mAccumulationFrame == 1)
-        {
-            mAccumulationSaveFramebuffer->bind();
-
-            glClearColor(0.0, 0.0, 0.0, 1.0);
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            mAccumulationSaveFramebuffer->unbind();
-        }
-
-        // Accumulation pipeline
-        {
-            mAccumulationFramebuffer->bind();
-
-            glClearColor(0.0, 0.0, 0.0, 1.0);
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            mGIAccumulationShader->setAccumulationFrame(mAccumulationFrame);
-
-            mScreenPlane->setShader(mGIAccumulationShader.get());
-            mScreenPlane->draw(getMainCamera());
-
-            mAccumulationFramebuffer->unbind();
-        }
-
-        // Save result to accumulation texture
-        if (mUseIndirect)
-        {
-            mAccumulationSaveFramebuffer->bind();
-
-            mScreenPlane->setShader(mAccumulationSaveShader.get());
-            mScreenPlane->draw(getMainCamera());
-
-            mAccumulationSaveFramebuffer->unbind();
-        }
-        */
 
         // Final pass
         {
@@ -771,14 +683,9 @@ private:
     std::shared_ptr<Framebuffer> mColorFramebuffer;
 
     // Accumulation
-    std::shared_ptr<Texture> mAccumulationTexture;
-    std::shared_ptr<Framebuffer> mAccumulationSaveFramebuffer;
-    std::shared_ptr<ScreenPlaneShader> mAccumulationSaveShader;
     uint32_t mAccumulationFrame = 1;
 
-    // Accumulation result texture
-    std::shared_ptr<Framebuffer> mAccumulationFramebuffer;
-    std::shared_ptr<GIAccumulationShader> mGIAccumulationShader;
+    // Result texture
     std::shared_ptr<Texture> mResultTexture;
 
     // Copy radiance
