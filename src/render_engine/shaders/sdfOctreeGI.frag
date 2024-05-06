@@ -447,6 +447,9 @@ struct OctreeNode
     // radiance caching
     vec4 readRadiance[6];
     vec4 writeRadiance[6];
+
+    vec4 invalidateReadRadiance[6];
+    vec4 invalidateWriteRadiance[6];
 };
 
 layout(std140, binding = 4) buffer SceneOctree 
@@ -887,8 +890,10 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
                                                                                    \
     vec3 indirectLight = vec3(0.0);                                                \
                                                                                    \
+    uint orientationIdx = getRadianceClosestOrientation(N);                        \
     vec4 currentRadiance = sampleCurrentRadiance(mat, pos, N);                     \
-    if (currentRadiance.w >= 250.0)                                                \
+    if (currentRadiance.w >= 250.0                                                 \
+        && sceneData[mat.idx].invalidateReadRadiance[orientationIdx].w < 1.0 && false)     \
     {                                                                              \
         indirectLight = currentRadiance.rgb;                                       \
     }                                                                              \
@@ -929,11 +934,38 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         indirectLight /= float(numSamples);                                        \
     }                                                                              \
                                                                                    \
-    uint orientationIdx = getRadianceClosestOrientation(N);                        \
     if (currentRadiance.w == 0.0)                                                  \
     {                                                                              \
         sceneData[mat.idx].writeRadiance[orientationIdx] =                         \
             vec4(indirectLight, float(numSamples));                                \
+    }                                                                              \
+    else if (sceneData[mat.idx].invalidateReadRadiance[orientationIdx].w > 0.0)    \
+    {                                                                              \
+        vec4 invalidateRadiance =                                                  \
+            sceneData[mat.idx].invalidateReadRadiance[orientationIdx];             \
+                                                                                   \
+        if (invalidateRadiance.w >= currentRadiance.w)                             \
+        {                                                                          \
+            sceneData[mat.idx].writeRadiance[orientationIdx] = invalidateRadiance; \
+            sceneData[mat.idx].invalidateWriteRadiance[orientationIdx] = vec4(0.0);\
+                                                                                   \
+            indirectLight = invalidateRadiance.rgb;                                \
+        }                                                                          \
+        else                                                                       \
+        {                                                                          \
+            if (invalidateRadiance.w - 1.0 <= 0.01)                                \
+                invalidateRadiance = vec4(indirectLight, float(numSamples));       \
+                                                                                   \
+            float totalSamples = invalidateRadiance.w + float(numSamples);         \
+            vec3 newRadiance =                                                     \
+                (numSamples / totalSamples) * indirectLight                        \
+                + (invalidateRadiance.w / totalSamples) * invalidateRadiance.rgb;  \
+                                                                                   \
+            sceneData[mat.idx].invalidateWriteRadiance[orientationIdx] =           \
+                vec4(newRadiance, totalSamples);                                   \
+                                                                                   \
+            indirectLight = mix(currentRadiance.rgb, newRadiance.rgb, min(totalSamples / currentRadiance.w, 1.0)); \
+        }                                                                          \
     }                                                                              \
     else                                                                           \
     {                                                                              \
@@ -943,7 +975,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
             + (currentRadiance.w / totalSamples) * currentRadiance.rgb;            \
                                                                                    \
         sceneData[mat.idx].writeRadiance[orientationIdx]                           \
-            = vec4(newRadiance, totalSamples);                                     \
+            = vec4(newRadiance, min(500, totalSamples));                           \
                                                                                    \
         indirectLight = newRadiance;                                               \
     }                                                                              \
