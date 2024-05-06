@@ -3,6 +3,7 @@
 layout (local_size_x = 64) in;
 
 uniform bool reset;
+uniform bool invalidate;
 uniform int leafIndicesSize;
 
 uint OCTREENODE_LEAF_MASK     = 0xC0000000; // 0x80000000;

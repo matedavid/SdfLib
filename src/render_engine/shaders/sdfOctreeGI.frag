@@ -27,7 +27,9 @@ uniform int numSamples;
 uniform int maxDepth;
 uniform int maxRaycastIterations;
 uniform bool useDirectSphereSampling;
+
 uniform int frameIndex;
+uniform int sceneChangedIndex;
 
 // GI Skybox
 uniform bool useCubemapSkybox;

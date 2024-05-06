@@ -45,10 +45,12 @@ public:
         mMaxDepthLocation = glGetUniformLocation(mRenderProgramId, "maxDepth");
         mMaxRaycastIterationsLocation = glGetUniformLocation(mRenderProgramId, "maxRaycastIterations");
         mUseDirectSphereSamplingLocation = glGetUniformLocation(mRenderProgramId, "useDirectSphereSampling");
-        mFrameIndexLocation = glGetUniformLocation(mRenderProgramId, "frameIndex");
         mUseCubemapSkyboxLocation = glGetUniformLocation(mRenderProgramId, "useCubemapSkybox");
         mSkyboxColorLocation = glGetUniformLocation(mRenderProgramId, "skyboxColor");
         mCubemapSkyboxLocation = glGetUniformLocation(mRenderProgramId, "cubemapSkybox");
+
+        mFrameIndexLocation = glGetUniformLocation(mRenderProgramId, "frameIndex");
+        mSceneChangedIndexLocation = glGetUniformLocation(mRenderProgramId, "sceneChangedIndex");
 
         //Options
         mUseSoftShadowsLocation = glGetUniformLocation(mRenderProgramId, "useSoftShadows");
@@ -119,9 +121,14 @@ public:
         mUseDirectSphereSampling = useDirectSphereSampling;
     }
 
-    void setFrameIndex(int frameIndex)
+    void setFrameIndex(int index)
     {
-        mFrameIndex = frameIndex;
+        mFrameIndex = index;
+    }
+
+    void setSceneUpdateFrameIndex(int index)
+    {
+        mSceneChangedIndex = index;
     }
 
     void setUseCubemapSkybox(bool use) {
@@ -200,9 +207,11 @@ public:
         glUniform1i(mMaxDepthLocation, mMaxDepth);
         glUniform1i(mMaxRaycastIterationsLocation, mMaxRaycastIterations);
         glUniform1i(mUseDirectSphereSamplingLocation, mUseDirectSphereSampling);
-        glUniform1i(mFrameIndexLocation, mFrameIndex);
         glUniform1f(mUseCubemapSkyboxLocation, mUseCubemapSkybox);
         glUniform3f(mSkyboxColorLocation, mSkyboxColor.r, mSkyboxColor.g, mSkyboxColor.b);
+
+        glUniform1i(mFrameIndexLocation, mFrameIndex);
+        glUniform1i(mSceneChangedIndexLocation, mSceneChangedIndex);
 
         if (mCubemapSkybox != nullptr)
         {
@@ -273,6 +282,9 @@ private:
 
     unsigned int mFrameIndexLocation;
     int mFrameIndex;
+
+    unsigned int mSceneChangedIndexLocation;
+    int mSceneChangedIndex;
 
     unsigned int mUseCubemapSkyboxLocation;
     bool mUseCubemapSkybox = false;

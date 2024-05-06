@@ -65,6 +65,7 @@ public:
         std::cout << "Num work groups x: " << mNumGroupsX << " for local size: " << LOCAL_SIZE_X << " and size(): " << mLeafIndicesSize << "\n";
 
         mResetAccumulationLocation = glGetUniformLocation(mRenderProgramId, "reset");
+        mInvalidateLocation = glGetUniformLocation(mRenderProgramId, "invalidate");
         mLeafIndicesSizeLocation = glGetUniformLocation(mRenderProgramId, "leafIndicesSize");
     }
 
@@ -78,6 +79,11 @@ public:
         mResetAccumulation = reset_;
     }
 
+    void setInvalidate(bool invalidate)
+    {
+        mInvalidate = invalidate;
+    }
+
     void dispatch()
     {
         glUseProgram(mRenderProgramId);
@@ -86,6 +92,7 @@ public:
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, mLeafIndicesSSBO);
 
         glUniform1i(mResetAccumulationLocation, mResetAccumulation);
+        glUniform1i(mInvalidateLocation, mInvalidate);
         glUniform1i(mLeafIndicesSizeLocation, mLeafIndicesSize);
 
         glDispatchCompute(mNumGroupsX, 1, 1);
@@ -103,6 +110,9 @@ private:
 
     bool mResetAccumulation = false;
     unsigned int mResetAccumulationLocation;
+
+    bool mInvalidate;
+    unsigned int mInvalidateLocation;
 
     int mLeafIndicesSize;
     unsigned int mLeafIndicesSizeLocation;

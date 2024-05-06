@@ -11,6 +11,7 @@
 #include <args.hxx>
 #include <imgui.h>
 #include <ImGuizmo.h>
+#include <glm/gtc/epsilon.hpp>
 
 #include <filesystem>
 
@@ -303,7 +304,10 @@ public:
         // const bool cameraMoved = wnd.isKeyPressed(GLFW_KEY_W) || wnd.isKeyPressed(GLFW_KEY_A) || wnd.isKeyPressed(GLFW_KEY_S) || wnd.isKeyPressed(GLFW_KEY_D);
 
         if (mUseIndirect)
+        {
             mAccumulationFrame++;
+            mSceneChangedFrame++;
+        }
 
         Scene::update(deltaTime);
     }
@@ -330,7 +334,10 @@ public:
         mOctreeGIShader->setMaxDepth(mMaxDepth);
         mOctreeGIShader->setMaxRaycastIterations(mMaxRaycastIterations);
         mOctreeGIShader->setUseDirectSphereSampling(mUseDirectSphereSampling);
+
         mOctreeGIShader->setFrameIndex(mAccumulationFrame);
+        mOctreeGIShader->setSceneUpdateFrameIndex(mSceneChangedFrame);
+
         mOctreeGIShader->setUseCubemapSkybox(mUseCubemapSkybox);
         mOctreeGIShader->setSkyboxColor(mSkyboxColor);
 
@@ -405,13 +412,17 @@ public:
         }
 
         // Copy Radiance pass
-        if (mAccumulate || mResetAccumulation)
+        if (mAccumulate || mResetAccumulation || mInvalidate)
         {
             mCopyRadianceShader->setReset(mResetAccumulation);
+            mCopyRadianceShader->setInvalidate(mInvalidate);
             mCopyRadianceShader->dispatch();
 
             if (mResetAccumulation)
                 mResetAccumulation = false;
+
+            if (mInvalidate)
+                mInvalidate = false;
         }
 
         // Denoise pass
@@ -448,11 +459,19 @@ public:
 
             // Draw light Gizmo
             for (size_t i = 0; i < mLightNumber; ++i) {
-                auto transform = glm::translate(glm::mat4(1.0), mLightPosition[0]);
+                glm::vec3 prevPos = mLightPosition[i];
+
+                auto transform = glm::translate(glm::mat4(1.0), mLightPosition[i]);
                 ImGuizmo::Manipulate(glm::value_ptr(getMainCamera()->getViewMatrix()), glm::value_ptr(getMainCamera()->getProjectionMatrix()), 
                     ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::LOCAL, glm::value_ptr(transform));
 
                 mLightPosition[i] = glm::vec3(transform[3]);
+
+                if (glm::any(glm::epsilonNotEqual(prevPos, mLightPosition[i], glm::epsilon<float>())))
+                {
+                    mInvalidate = true;
+                    mSceneChangedFrame = 1;
+                }
             }
 
             Scene::draw();
@@ -488,9 +507,11 @@ public:
             ImGui::Checkbox("Use Denoising", &mUseDenoising);
             ImGui::Checkbox("Accumulate", &mAccumulate);
             ImGui::Text("Current frame: %d", mAccumulationFrame);
+            ImGui::Text("Scene Changed frame: %d", mSceneChangedFrame);
             if (ImGui::Button("Reset Accumulation"))
             {
                 mAccumulationFrame = 1;
+                mSceneChangedFrame = 1;
                 mResetAccumulation = true;
             }
             ImGui::InputInt("Num Samples", &mNumSamples);
@@ -546,8 +567,16 @@ public:
             //     spdlog::info("Screenshot taken!");
             // }
 
+            int prevLightNumber = mLightNumber;
+
             ImGui::Text("Lighting settings");
             ImGui::SliderInt("Lights", &mLightNumber, 0, 4);
+
+            if (mLightNumber != prevLightNumber)
+            {
+                mInvalidate = true;
+                mSceneChangedFrame = 1;
+            }
 
             for (int i = 0; i < mLightNumber; ++i)
             { // DOES NOT WORK, PROBLEM WITH REFERENCES
@@ -684,6 +713,8 @@ private:
 
     // Accumulation
     uint32_t mAccumulationFrame = 1;
+    uint32_t mSceneChangedFrame = 1;
+    bool mInvalidate = false;
 
     // Result texture
     std::shared_ptr<Texture> mResultTexture;
@@ -732,7 +763,7 @@ private:
     glm::vec3 mLightPosition[4] =
         {
             // glm::vec3(1.0f, 2.0f, 1.0f),
-            glm::vec3(0.0f, 0.8f, 0.0f),
+            glm::vec3(0.0f, 0.8f, 2.2f),
             glm::vec3(-1.0f, 2.0f, 1.0f),
             glm::vec3(1.0f, 2.0f, -1.0f),
             glm::vec3(-1.0f, 2.0f, -1.0f)};
