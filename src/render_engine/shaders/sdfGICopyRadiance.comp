@@ -26,6 +26,9 @@ struct OctreeNode
     // radiance caching
     vec4 readRadiance[6];
     vec4 writeRadiance[6];
+
+    vec4 invalidReadRadiance[6];
+    vec4 invalidWriteRadiance[6];
 };
 
 #define NODE_GREY  0
@@ -74,7 +77,24 @@ void main()
         }
         else
         {
-            sceneData[idx].readRadiance[i] = sceneData[idx].writeRadiance[i];
+            sceneData[idx].readRadiance[i]        = sceneData[idx].writeRadiance[i];
+            sceneData[idx].invalidReadRadiance[i] = sceneData[idx].invalidWriteRadiance[i];
+        }
+
+        if (sceneData[idx].invalidReadRadiance[i].w > sceneData[idx].readRadiance[i].w)
+        {
+            sceneData[idx].writeRadiance[i] = sceneData[idx].invalidReadRadiance[i];
+            sceneData[idx].readRadiance[i] = sceneData[idx].invalidReadRadiance[i];
+
+            sceneData[idx].invalidWriteRadiance[i] = vec4(0.0);
+            sceneData[idx].invalidReadRadiance[i]  = vec4(0.0);
+
+        }
+
+        if (invalidate)
+        {
+            sceneData[idx].invalidReadRadiance[i]  = vec4(0.0, 0.0, 0.0, 1.0);
+            sceneData[idx].invalidWriteRadiance[i] = vec4(0.0, 0.0, 0.0, 1.0);
         }
     }
 }

@@ -470,7 +470,7 @@ public:
                 if (glm::any(glm::epsilonNotEqual(prevPos, mLightPosition[i], glm::epsilon<float>())))
                 {
                     mInvalidate = true;
-                    mSceneChangedFrame = 1;
+                    mSceneChangedFrame = 0;
                 }
             }
 
@@ -511,7 +511,7 @@ public:
             if (ImGui::Button("Reset Accumulation"))
             {
                 mAccumulationFrame = 1;
-                mSceneChangedFrame = 1;
+                mSceneChangedFrame = 0;
                 mResetAccumulation = true;
             }
             ImGui::InputInt("Num Samples", &mNumSamples);
@@ -575,7 +575,7 @@ public:
             if (mLightNumber != prevLightNumber)
             {
                 mInvalidate = true;
-                mSceneChangedFrame = 1;
+                mSceneChangedFrame = 0;
             }
 
             for (int i = 0; i < mLightNumber; ++i)

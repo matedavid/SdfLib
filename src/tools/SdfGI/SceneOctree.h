@@ -56,6 +56,9 @@ struct ShaderOctreeNode
     glm::vec4 readRadiance[6]{};
     glm::vec4 writeRadiance[6]{};
 
+    glm::vec4 invalidReadRadiance[6]{};
+    glm::vec4 invalidWriteRadiance[6]{};
+
     void setNodeType(OctreeNode::Type type)
     {
         data |= (static_cast<uint32_t>(type) << 30) & SHADER_LEAF_MASK;
