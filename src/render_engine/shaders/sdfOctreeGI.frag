@@ -891,7 +891,10 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
     vec3 indirectLight = vec3(0.0);                                                \
                                                                                    \
     vec4 currentRadiance = sampleCurrentRadiance(mat, pos, N);                     \
-    if (currentRadiance.w >= 250.0 && false)                                                \
+                                                                                   \
+    uint orientationIdx = getRadianceClosestOrientation(N);                        \
+    vec4 invalidData = sceneData[mat.idx].invalidReadRadiance[orientationIdx];     \
+    if (currentRadiance.w >= 250.0 && invalidData.w <= 0.5)                        \
     {                                                                              \
         indirectLight = currentRadiance.rgb;                                       \
     }                                                                              \
@@ -932,8 +935,6 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         indirectLight /= float(numSamples);                                        \
     }                                                                              \
                                                                                    \
-    uint orientationIdx = getRadianceClosestOrientation(N);                        \
-    vec4 invalidData = sceneData[mat.idx].invalidReadRadiance[orientationIdx];     \
     if (currentRadiance.w == 0.0)                                                  \
     {                                                                              \
         sceneData[mat.idx].writeRadiance[orientationIdx] =                         \
