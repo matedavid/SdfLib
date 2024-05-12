@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <spdlog/spdlog.h>
 
+#include "stb/stb_image.h"
+
 namespace sdflib
 {
 #ifdef SDFLIB_ASSIMP_AVAILABLE
@@ -54,9 +56,12 @@ Mesh::Mesh(std::string filePath)
         }
 
         // material
-        if (mesh->mMaterialIndex < 0) {
-            for (std::size_t f = 0; f < mesh->mNumFaces; ++f)
+        if (mesh->mMaterialIndex < 0) 
+        {
+            for (std::size_t f = 0; f < mesh->mNumFaces; ++f) 
+            {
                 mMaterialPropertiesPerTriangle.push_back(MaterialProperties{});
+            }
 
             continue;
         }
@@ -67,23 +72,59 @@ Mesh::Mesh(std::string filePath)
         props.metallic = 0.5f;
         props.roughness = 0.5f;
 
-        aiColor3D aiColor;
-        if (material->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor) == aiReturn_SUCCESS)
-            props.albedo = glm::vec3(aiColor.r, aiColor.g, aiColor.b);
-
-        ai_real metallic;
-        if (material->Get(AI_MATKEY_METALLIC_FACTOR, metallic) == aiReturn_SUCCESS) 
-            props.metallic = metallic;
-
-        ai_real roughness;
-        if (material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == aiReturn_SUCCESS) 
-            props.roughness = roughness;
-
-        props.metallic = glm::clamp(props.metallic, 0.1f, 1.0f);
-        props.roughness = glm::clamp(props.roughness, 0.1f, 1.0f);
-
         for (std::size_t f = 0; f < mesh->mNumFaces; ++f) 
+        {
+            const auto& face = mesh->mFaces[f];
+            assert(face.mNumIndices == 3);
+
+            const auto v0 = face.mIndices[0];
+            const auto v1 = face.mIndices[1];
+            const auto v2 = face.mIndices[2];
+
+            const glm::vec2 uv0 = {mesh->mTextureCoords[0][v0].x, 1.0 - mesh->mTextureCoords[0][v0].y};
+            const glm::vec2 uv1 = {mesh->mTextureCoords[0][v1].x, 1.0 - mesh->mTextureCoords[0][v1].y};
+            const glm::vec2 uv2 = {mesh->mTextureCoords[0][v2].x, 1.0 - mesh->mTextureCoords[0][v2].y};
+
+            aiColor3D aiColor;
+            if (material->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor) == aiReturn_SUCCESS)
+                props.albedo = glm::vec3(aiColor.r, aiColor.g, aiColor.b);
+
+            ai_real metallic;
+            if (material->Get(AI_MATKEY_METALLIC_FACTOR, metallic) == aiReturn_SUCCESS) 
+                props.metallic = metallic;
+
+            ai_real roughness;
+            if (material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == aiReturn_SUCCESS) 
+                props.roughness = roughness;
+
+            aiString texturePath;
+            if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS) 
+            {
+                auto path = std::string{texturePath.C_Str()};
+
+                // TODO: Probably should not read texture every time
+
+                int width, height, channels;
+                stbi_uc* pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+                assert(pixels != nullptr && "Could not open texture");
+
+                auto center = (uv0 + uv1 + uv2) / 3.0f;
+                center.x *= (width-1);
+                center.y *= (height-1);
+
+                int pos = int(center.y) * width * 4 + int(center.x) * 4;
+
+                glm::vec3 color = { pixels[pos+0], pixels[pos+1], pixels[pos+2] };
+                props.albedo = glm::vec3(color) / 255.0f;
+
+                stbi_image_free(pixels);
+            }
+
+            props.metallic = glm::clamp(props.metallic, 0.1f, 1.0f);
+            props.roughness = glm::clamp(props.roughness, 0.1f, 1.0f);
+
             mMaterialPropertiesPerTriangle.push_back(props);
+        }
     }
 
     // Calculate bounding box
