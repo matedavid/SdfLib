@@ -609,40 +609,6 @@ vec4 sampleCurrentRadiance(Material mat, vec3 gridPos, vec3 N)
 
     OctreeNode node = sceneData[mat.idx];
 
-    /*
-    OctreeNode parentNode = sceneData[mat.parentIdx];
-
-    uint childrenIdx = parentNode.data & OCTREENODE_CHILDREN_MASK;
-
-    vec3 radiance = node.readRadiance.rgb;
-    float sumWeights = 1.0;
-
-    for (uint i = 0; i < 8; ++i) 
-    {
-        if (childrenIdx + i == mat.idx) continue;
-
-        OctreeNode child = sceneData[childrenIdx + i];
-        if (nodeIsBlack(child.data))
-        {
-            if (child.readRadiance.w < MIN_SAMPLES_RADIANCE) continue;
-
-            radiance += child.readRadiance.rgb;
-            sumWeights += 1.0;
-        }
-    }
-
-    return vec4(radiance / float(sumWeights), node.readRadiance.w);
-    */
-
-    vec3 directions[] = {
-        vec3(1.0, 0.0, 0.0),
-        vec3(-1.0, 0.0, 0.0),
-        vec3(0.0, 1.0, 0.0),
-        vec3(0.0, -1.0, 0.0),
-        vec3(0.0, 0.0, 1.0),
-        vec3(0.0, 0.0, -1.0),
-    };
-
     vec3 center = (node.bboxMin + node.bboxMax) * 0.5;
     float size = (node.bboxMax - node.bboxMin).x;
 
@@ -651,7 +617,6 @@ vec4 sampleCurrentRadiance(Material mat, vec3 gridPos, vec3 N)
     vec3 radiance = node.readRadiance[orientationIdx].rgb;
     float sumWeights = 1.0;
 
-    // for (int i = 0; i < 6; ++i) {
     for (int x = -1; x <= 1; ++x) {
         for (int y = -1; y <= 1; ++y) {
             for (int z = -1; z <= 1; ++z) {
@@ -661,6 +626,7 @@ vec4 sampleCurrentRadiance(Material mat, vec3 gridPos, vec3 N)
                 int neighborIdx = getSceneOctreeColor(neighborGridPos).idx;
                 if (neighborIdx == -1) continue;
                 if (sceneData[neighborIdx].readRadiance[orientationIdx].w < MIN_SAMPLES_RADIANCE) continue;
+                if (sceneData[neighborIdx].invalidReadRadiance[orientationIdx].w > 0.5) continue;
 
                 radiance += sceneData[neighborIdx].readRadiance[orientationIdx].rgb;
                 sumWeights += 1.0;
@@ -960,7 +926,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
             + (currentRadiance.w / totalSamples) * currentRadiance.rgb;            \
                                                                                    \
         sceneData[mat.idx].writeRadiance[orientationIdx]                           \
-            = vec4(newRadiance, min(totalSamples,250));                                     \
+            = vec4(newRadiance, totalSamples);                                     \
                                                                                    \
         indirectLight = newRadiance;                                               \
     }                                                                              \

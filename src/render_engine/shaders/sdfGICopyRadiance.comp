@@ -74,6 +74,9 @@ void main()
         {
             sceneData[idx].readRadiance[i]  = vec4(0.0);
             sceneData[idx].writeRadiance[i] = vec4(0.0);
+
+            sceneData[idx].invalidReadRadiance[i]  = vec4(0.0);
+            sceneData[idx].invalidWriteRadiance[i] = vec4(0.0);
         }
         else
         {
@@ -84,7 +87,7 @@ void main()
         if (sceneData[idx].invalidReadRadiance[i].w > sceneData[idx].readRadiance[i].w)
         {
             sceneData[idx].writeRadiance[i] = sceneData[idx].invalidReadRadiance[i];
-            sceneData[idx].readRadiance[i] = sceneData[idx].invalidReadRadiance[i];
+            sceneData[idx].readRadiance[i]  = sceneData[idx].invalidReadRadiance[i];
 
             sceneData[idx].invalidWriteRadiance[i] = vec4(0.0);
             sceneData[idx].invalidReadRadiance[i]  = vec4(0.0);
