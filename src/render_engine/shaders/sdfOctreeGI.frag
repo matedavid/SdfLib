@@ -926,7 +926,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
             + (currentRadiance.w / totalSamples) * currentRadiance.rgb;            \
                                                                                    \
         sceneData[mat.idx].writeRadiance[orientationIdx]                           \
-            = vec4(newRadiance, totalSamples);                                     \
+            = vec4(newRadiance, min(totalSamples, 300));                                     \
                                                                                    \
         indirectLight = newRadiance;                                               \
     }                                                                              \
