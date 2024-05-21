@@ -2,8 +2,16 @@
 #include <iostream>
 #include <assert.h>
 #include <spdlog/spdlog.h>
+#include <filesystem>
 
 #include "stb/stb_image.h"
+
+struct TextureInfo {
+    stbi_uc* data;
+    int width;
+    int height;
+    int channels;
+};
 
 namespace sdflib
 {
@@ -26,6 +34,8 @@ Mesh::Mesh(std::string filePath)
 
     SPDLOG_INFO("Num meshes: {}", scene->mNumMeshes);
     // initMesh(scene->mMeshes[0]);
+
+    std::unordered_map<std::string, TextureInfo> texture_cache;
 
     for (std::size_t m = 0; m < scene->mNumMeshes; m++)
     {
@@ -81,9 +91,9 @@ Mesh::Mesh(std::string filePath)
             const auto v1 = face.mIndices[1];
             const auto v2 = face.mIndices[2];
 
-            const glm::vec2 uv0 = {mesh->mTextureCoords[0][v0].x, 1.0 - mesh->mTextureCoords[0][v0].y};
-            const glm::vec2 uv1 = {mesh->mTextureCoords[0][v1].x, 1.0 - mesh->mTextureCoords[0][v1].y};
-            const glm::vec2 uv2 = {mesh->mTextureCoords[0][v2].x, 1.0 - mesh->mTextureCoords[0][v2].y};
+            glm::vec2 uv0 = {mesh->mTextureCoords[0][v0].x, 1.0 - mesh->mTextureCoords[0][v0].y};
+            glm::vec2 uv1 = {mesh->mTextureCoords[0][v1].x, 1.0 - mesh->mTextureCoords[0][v1].y};
+            glm::vec2 uv2 = {mesh->mTextureCoords[0][v2].x, 1.0 - mesh->mTextureCoords[0][v2].y};
 
             aiColor3D aiColor;
             if (material->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor) == aiReturn_SUCCESS)
@@ -101,12 +111,36 @@ Mesh::Mesh(std::string filePath)
             if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS) 
             {
                 auto path = std::string{texturePath.C_Str()};
+                auto pp = path.find('\\');
+                if (pp != std::string::npos) {
+                    path = path.replace(pp, 1, "/");
+                }
 
-                // TODO: Probably should not read texture every time
+                auto texturePath = std::filesystem::path(filePath).parent_path() / path;
 
                 int width, height, channels;
-                stbi_uc* pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-                assert(pixels != nullptr && "Could not open texture");
+                stbi_uc* pixels;
+
+                auto it = texture_cache.find(texturePath.string());
+                if (it != texture_cache.end()) 
+                {
+                    pixels = it->second.data;
+                    width = it->second.width;
+                    height = it->second.height;
+                    channels = it->second.channels;
+                }
+                else 
+                {
+                    pixels = stbi_load(texturePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+                    assert(pixels != nullptr && "Could not open texture");
+
+                    texture_cache.insert({texturePath.string(), TextureInfo{
+                        .data = pixels,
+                        .width = width,
+                        .height = height,
+                        .channels = channels,
+                    }});
+                }
 
                 auto center = (uv0 + uv1 + uv2) / 3.0f;
                 center.x *= (width-1);
@@ -114,10 +148,10 @@ Mesh::Mesh(std::string filePath)
 
                 int pos = int(center.y) * width * 4 + int(center.x) * 4;
 
-                glm::vec3 color = { pixels[pos+0], pixels[pos+1], pixels[pos+2] };
-                props.albedo = glm::vec3(color) / 255.0f;
-
-                stbi_image_free(pixels);
+                if (pos < width * height * channels) {
+                    glm::vec3 color = { pixels[pos+0], pixels[pos+1], pixels[pos+2] };
+                    props.albedo = glm::vec3(color) / 255.0f;
+                }
             }
 
             props.metallic = glm::clamp(props.metallic, 0.1f, 1.0f);
@@ -134,6 +168,11 @@ Mesh::Mesh(std::string filePath)
 
     // Indices
     SPDLOG_INFO("Model num faces: {}", mIndices.size() / 3);
+
+    // Clean texture cache
+    for (const auto& info : texture_cache) {
+        stbi_image_free(info.second.data);
+    }
 }
 
 Mesh::Mesh(const aiMesh* mesh)
