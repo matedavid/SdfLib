@@ -520,9 +520,8 @@ Material getSceneOctreeColor(vec3 gridPoint)
 
     if (nodeIsWhite(currentNode.data))
     {
-        // Should not happen :(
         Material mat;
-        mat.albedo = vec3(1.0, 0.0, 1.0);
+        mat.albedo = vec3(0.0, 0.0, 0.0);
         mat.idx = -1;
         return mat;
     }
@@ -534,61 +533,9 @@ Material getSceneOctreeColor(vec3 gridPoint)
     mat.idx = int(idx);
 
     return mat;
-
-    /*
-    vec3 point = (fragInverseWorldToStartGridMatrix * vec4(gridPoint, 1.0)).xyz;
-
-    uint idx = 0;
-    if (point.x < sceneData[idx].bboxMin.x || point.x > sceneData[idx].bboxMax.x ||
-        point.y < sceneData[idx].bboxMin.y || point.y > sceneData[idx].bboxMax.y ||
-        point.z < sceneData[idx].bboxMin.z || point.z > sceneData[idx].bboxMax.z)
-    {
-        Material mat;
-        mat.albedo = vec3(0.0, 0.0, 0.0);
-        mat.roughness = 0.0;
-        mat.metallic = 0.0;
-        mat.idx = -1;
-
-        return mat; 
-    }
-
-    uint prevIdx = idx;
-    while (!nodeIsLeaf(sceneData[idx].data))
-    {
-        OctreeNode node = sceneData[idx];
-
-        uint firstChildIdx = node.data & OCTREENODE_CHILDREN_MASK;
-
-        for (int i = 0; i < 8; ++i) 
-        {
-            uint childIdx = firstChildIdx + i;
-
-            vec3 childBboxMin = sceneData[childIdx].bboxMin;
-            vec3 childBboxMax = sceneData[childIdx].bboxMax;
-
-            if (point.x >= childBboxMin.x && point.x <= childBboxMax.x &&
-                point.y >= childBboxMin.y && point.y <= childBboxMax.y &&
-                point.z >= childBboxMin.z && point.z <= childBboxMax.z)
-            {
-                prevIdx = idx;
-                idx = childIdx;
-                break;
-            }
-        }
-
-        if (prevIdx == idx)
-        {
-            // Should not happen
-            Material mat;
-            mat.albedo = vec3(1.0, 0.0, 1.0);
-            mat.idx = -1;
-            return mat;
-        }
-    }
-    */
 }
 
-#define MIN_SAMPLES_RADIANCE 75.0
+#define MIN_SAMPLES_RADIANCE 25.0
 
 uint getRadianceClosestOrientation(vec3 direction)
 {
