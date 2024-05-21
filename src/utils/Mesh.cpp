@@ -91,9 +91,13 @@ Mesh::Mesh(std::string filePath)
             const auto v1 = face.mIndices[1];
             const auto v2 = face.mIndices[2];
 
-            glm::vec2 uv0 = {mesh->mTextureCoords[0][v0].x, 1.0 - mesh->mTextureCoords[0][v0].y};
-            glm::vec2 uv1 = {mesh->mTextureCoords[0][v1].x, 1.0 - mesh->mTextureCoords[0][v1].y};
-            glm::vec2 uv2 = {mesh->mTextureCoords[0][v2].x, 1.0 - mesh->mTextureCoords[0][v2].y};
+            glm::vec2 uv0, uv1, uv2;
+            if (mesh->HasTextureCoords(0)) 
+            {
+                uv0 = {mesh->mTextureCoords[0][v0].x, 1.0 - mesh->mTextureCoords[0][v0].y};
+                uv1 = {mesh->mTextureCoords[0][v1].x, 1.0 - mesh->mTextureCoords[0][v1].y};
+                uv2 = {mesh->mTextureCoords[0][v2].x, 1.0 - mesh->mTextureCoords[0][v2].y};
+            }
 
             aiColor3D aiColor;
             if (material->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor) == aiReturn_SUCCESS)
