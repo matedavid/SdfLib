@@ -306,7 +306,7 @@ void RenderSdf::drawGui()
             
             ImGui::EndMenu();
         }
-        ImGui::EndMenuBar();
+        ImGui::EndMainMenuBar();
     }
 
     if (mShowSceneGUI) 
