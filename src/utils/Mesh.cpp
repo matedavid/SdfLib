@@ -142,15 +142,27 @@ Mesh::Mesh(std::string filePath)
                     }});
                 }
 
-                auto center = (uv0 + uv1 + uv2) / 3.0f;
-                center.x *= (width-1);
-                center.y *= (height-1);
+                if (mesh->HasTextureCoords(0)) 
+                {
+                    auto center = (uv0 + uv1 + uv2) / 3.0f;
+                    center.x *= (width-1);
+                    center.y *= (height-1);
 
-                int pos = int(center.y) * width * 4 + int(center.x) * 4;
+                    int pos = int(center.y) * width * 4 + int(center.x) * 4;
 
-                if (pos < width * height * channels) {
-                    glm::vec3 color = { pixels[pos+0], pixels[pos+1], pixels[pos+2] };
-                    props.albedo = glm::vec3(color) / 255.0f;
+                    if (pos < width*height*4) 
+                    {
+                        glm::vec3 color = { pixels[pos+0], pixels[pos+1], pixels[pos+2] };
+                        props.albedo = glm::vec3(color) / 255.0f;
+                    } 
+                    else 
+                    {
+                        std::cout << "Texture coords not correct:\n";
+                        std::cout << "\t" << uv0.x << " " << uv0.y << "\n";
+                        std::cout << "\t" << uv1.x << " " << uv1.y << "\n";
+                        std::cout << "\t" << uv2.x << " " << uv2.y << "\n";
+                        std::cout << "\n";
+                    }
                 }
             }
 
