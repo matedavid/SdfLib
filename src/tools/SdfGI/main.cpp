@@ -461,6 +461,8 @@ public:
 
             // Draw light Gizmo
             for (size_t i = 0; i < mLightNumber; ++i) {
+                ImGuizmo::SetID(i);
+
                 glm::vec3 prevPos = mLightPosition[i];
 
                 auto transform = glm::translate(glm::mat4(1.0), mLightPosition[i]);
@@ -592,7 +594,7 @@ public:
                 std::string radius = "Radius##" + std::to_string(i + 48);
                 ImGui::InputFloat3(pos.c_str(), reinterpret_cast<float *>(&mLightPosition[i]));
                 ImGui::ColorEdit3(col.c_str(), reinterpret_cast<float *>(&mLightColor[i]));
-                ImGui::SliderFloat(intens.c_str(), &mLightIntensity[i], 0.0f, 500.0f);
+                ImGui::InputFloat(intens.c_str(), &mLightIntensity[i]);
                 ImGui::SliderFloat(radius.c_str(), &mLightRadius[i], 0.01f, 1.0f);
             }
 
