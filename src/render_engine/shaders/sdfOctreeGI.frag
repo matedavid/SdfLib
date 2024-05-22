@@ -311,7 +311,7 @@ float map(vec3 pos)
 {
     // vec3 aPos = pos + vec3(-0.5, -0.1, -0.5);
     // return min(distanceScale * getDistance(pos), max(length(aPos.xz) - 1.3, abs(aPos.y) - 0.07));
-    return distanceScale * getDistance(pos);
+    return distanceScale * getDistance(pos) - 0.001;
 }
 
 //Gradient of the scene

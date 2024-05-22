@@ -451,6 +451,8 @@ public:
             glClearColor(0.7, 0.1, 0.2, 1.0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+            mScreenPresentShader->setTonemappingConstant(mTonemappingConstant);
+
             mScreenPlane->setShader(mScreenPresentShader.get());
             mScreenPlane->draw(getMainCamera());
 
@@ -518,6 +520,9 @@ public:
             ImGui::InputInt("Max Depth", &mMaxDepth);
             ImGui::InputInt("Max Raycast Iterations", &mMaxRaycastIterations);
             ImGui::Checkbox("Use Direct Sphere Sampling", &mUseDirectSphereSampling);
+
+            ImGui::Text("Present options");
+            ImGui::InputFloat("Tonemapping Constant", &mTonemappingConstant);
 
             ImGui::Text("Denoising options");
             ImGui::InputFloat("Sigma", &mDenoiseSigma);
@@ -587,7 +592,7 @@ public:
                 std::string radius = "Radius##" + std::to_string(i + 48);
                 ImGui::InputFloat3(pos.c_str(), reinterpret_cast<float *>(&mLightPosition[i]));
                 ImGui::ColorEdit3(col.c_str(), reinterpret_cast<float *>(&mLightColor[i]));
-                ImGui::SliderFloat(intens.c_str(), &mLightIntensity[i], 0.0f, 20.0f);
+                ImGui::SliderFloat(intens.c_str(), &mLightIntensity[i], 0.0f, 500.0f);
                 ImGui::SliderFloat(radius.c_str(), &mLightRadius[i], 0.01f, 1.0f);
             }
 
@@ -757,6 +762,9 @@ private:
     float mDenoiseSigma = 5.0;
     float mDenoisekSigma = 2.0;
     float mDenoiseThreshold = 0.1;
+
+    // Preseent options
+    float mTonemappingConstant = 2.2;
 
     // Lighting
     int mLightNumber = 1;
