@@ -154,7 +154,7 @@ Mesh::Mesh(std::string filePath)
 
                     int pos = int(center.y) * width * 4 + int(center.x) * 4;
 
-                    if (pos < width*height*4) 
+                    if (pos < width*height*4 && pos >= 0) 
                     {
                         glm::vec3 color = { pixels[pos+0], pixels[pos+1], pixels[pos+2] };
                         props.albedo = glm::vec3(color) / 255.0f;
