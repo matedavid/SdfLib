@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <spdlog/spdlog.h>
 #include <filesystem>
+#include <random>
 
 #include "stb/stb_image.h"
 
@@ -148,6 +149,59 @@ Mesh::Mesh(std::string filePath)
 
                 if (mesh->HasTextureCoords(0)) 
                 {
+                    const auto fix_uv = [](glm::vec2 uv) -> glm::vec2 {
+                        return {glm::fract(uv.x), glm::fract(uv.y)};
+                    };
+
+                    uv0 = fix_uv(uv0);
+                    uv1 = fix_uv(uv1);
+                    uv2 = fix_uv(uv2);
+
+                    float min_X = glm::min(uv0.x, glm::min(uv1.x, uv2.x));
+                    float max_X = glm::max(uv0.x, glm::max(uv1.x, uv2.x));
+
+                    float min_Y = glm::min(uv0.y, glm::min(uv1.y, uv2.y));
+                    float max_Y = glm::max(uv0.y, glm::max(uv1.y, uv2.y));
+
+                    std::default_random_engine gen_X;
+                    std::uniform_real_distribution<float> distribution_X(min_X, max_X);
+
+                    std::default_random_engine gen_Y;
+                    std::uniform_real_distribution<float> distribution_Y(min_Y, max_Y);
+
+                    glm::vec3 color = glm::vec3(0.0f);
+                    constexpr uint32_t NUM_SAMPLES = 10;
+                    uint32_t numInvalidCoords = 0;
+
+                    for (uint32_t i = 0; i < NUM_SAMPLES; ++i)
+                    {
+                        float uv_x = distribution_X(gen_X) * (width-1);
+                        float uv_y = distribution_Y(gen_Y) * (height-1);
+
+                        int pos = int(uv_y) * width * 4 + int(uv_x) * 4;
+
+                        if (pos < width*height*4 && pos >= 0) 
+                        {
+                            glm::vec3 c = { pixels[pos+0], pixels[pos+1], pixels[pos+2] };
+                            color += c / 255.0f;
+                        } 
+                        else 
+                        {
+                            std::cout << "Texture coords not correct:\n";
+                            std::cout << "\t" << uv_x << " " << uv_y << "\n";
+
+                            numInvalidCoords++;
+                        }
+                    }
+
+                    if (numInvalidCoords == NUM_SAMPLES) {
+                        std::cout << "Num of invalid coords is the same as num of samples, using default color\n";
+                        color = glm::vec3(0.17f, 0.17f, 0.17f);
+                    }
+
+                    props.albedo = color / float(NUM_SAMPLES);
+
+                    /*
                     auto center = (uv0 + uv1 + uv2) / 3.0f;
                     center.x *= (width-1);
                     center.y *= (height-1);
@@ -167,6 +221,7 @@ Mesh::Mesh(std::string filePath)
                         std::cout << "\t" << uv2.x << " " << uv2.y << "\n";
                         std::cout << "\n";
                     }
+                    */
                 }
             }
 
