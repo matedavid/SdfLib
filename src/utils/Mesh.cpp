@@ -135,7 +135,7 @@ Mesh::Mesh(std::string filePath)
                 }
                 else 
                 {
-                    pixels = stbi_load(texturePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+                    pixels = stbi_load(texturePath.string().c_str(), &width, &height, &channels, STBI_rgb_alpha);
                     assert(pixels != nullptr && "Could not open texture");
 
                     texture_cache.insert({texturePath.string(), TextureInfo{
