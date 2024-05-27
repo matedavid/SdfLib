@@ -312,7 +312,12 @@ float map(vec3 pos)
 {
     // vec3 aPos = pos + vec3(-0.5, -0.1, -0.5);
     // return min(distanceScale * getDistance(pos), max(length(aPos.xz) - 1.3, abs(aPos.y) - 0.07));
-    return distanceScale * getDistance(pos) - sdfOffset;
+    return distanceScale * getDistance(pos);
+}
+
+float map(vec3 pos, float offset)
+{
+    return distanceScale * getDistance(pos) - offset;
 }
 
 //Gradient of the scene
@@ -410,7 +415,7 @@ float softshadow( in vec3 ro, in vec3 rd, float mint, float maxt, float w )
     float t = mint;
     for( int i=0; i<maxShadowIterations && t<maxt; i++ )
     {
-        float h = map(ro + t*rd);
+        float h = map(ro + t*rd, sdfOffset);
         res = min( res, h/(w*t) );
         t += clamp(h, 0.005, 0.50);
         if( res<-1.0 || t>maxt ) break;
