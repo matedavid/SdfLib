@@ -48,6 +48,7 @@ public:
         mUseCubemapSkyboxLocation = glGetUniformLocation(mRenderProgramId, "useCubemapSkybox");
         mSkyboxColorLocation = glGetUniformLocation(mRenderProgramId, "skyboxColor");
         mCubemapSkyboxLocation = glGetUniformLocation(mRenderProgramId, "cubemapSkybox");
+        mSdfOffsetLocation = glGetUniformLocation(mRenderProgramId, "sdfOffset");
 
         mFrameIndexLocation = glGetUniformLocation(mRenderProgramId, "frameIndex");
         mSceneChangedIndexLocation = glGetUniformLocation(mRenderProgramId, "sceneChangedIndex");
@@ -119,6 +120,11 @@ public:
     void setUseDirectSphereSampling(bool useDirectSphereSampling)
     {
         mUseDirectSphereSampling = useDirectSphereSampling;
+    }
+
+    void setSdfOffset(float sdfOffset)
+    {
+        mSdfOffset = sdfOffset;
     }
 
     void setFrameIndex(int index)
@@ -209,6 +215,7 @@ public:
         glUniform1i(mUseDirectSphereSamplingLocation, mUseDirectSphereSampling);
         glUniform1f(mUseCubemapSkyboxLocation, mUseCubemapSkybox);
         glUniform3f(mSkyboxColorLocation, mSkyboxColor.r, mSkyboxColor.g, mSkyboxColor.b);
+        glUniform1f(mSdfOffsetLocation, mSdfOffset);
 
         glUniform1i(mFrameIndexLocation, mFrameIndex);
         glUniform1i(mSceneChangedIndexLocation, mSceneChangedIndex);
@@ -279,6 +286,9 @@ private:
 
     unsigned int mUseDirectSphereSamplingLocation;
     bool mUseDirectSphereSampling = false;
+
+    unsigned int mSdfOffsetLocation;
+    float mSdfOffset = 0.0f;
 
     unsigned int mFrameIndexLocation;
     int mFrameIndex;

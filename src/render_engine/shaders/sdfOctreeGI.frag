@@ -27,6 +27,7 @@ uniform int numSamples;
 uniform int maxDepth;
 uniform int maxRaycastIterations;
 uniform bool useDirectSphereSampling;
+uniform float sdfOffset;
 
 uniform int frameIndex;
 uniform int sceneChangedIndex;
@@ -311,7 +312,7 @@ float map(vec3 pos)
 {
     // vec3 aPos = pos + vec3(-0.5, -0.1, -0.5);
     // return min(distanceScale * getDistance(pos), max(length(aPos.xz) - 1.3, abs(aPos.y) - 0.07));
-    return distanceScale * getDistance(pos) - 0.001;
+    return distanceScale * getDistance(pos) - sdfOffset;
 }
 
 //Gradient of the scene
@@ -848,12 +849,12 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         indirectLight /= float(numSamples);                                        \
     }                                                                              \
                                                                                    \
-    if (currentRadiance.w == 0.0)                                                  \
+    if (currentRadiance.w == 0.0 && depth == maxDepth)                             \
     {                                                                              \
         sceneData[mat.idx].writeRadiance[orientationIdx] =                         \
             vec4(indirectLight, float(numSamples));                                \
     }                                                                              \
-    else if (invalidData.w > 0.5)                                                  \
+    else if (invalidData.w > 0.5 && depth == maxDepth)                             \
     {                                                                              \
         float totalSamples = invalidData.w + float(numSamples);                    \
         vec3 newRadiance                                                           \
@@ -865,7 +866,7 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
                                                                                    \
         indirectLight = mix(currentRadiance.rgb, newRadiance, totalSamples / currentRadiance.w);                                               \
     }                                                                              \
-    else                                                                           \
+    else if (depth == maxDepth)                                                    \
     {                                                                              \
         float totalSamples = currentRadiance.w + float(numSamples);                \
         vec3 newRadiance =                                                         \
