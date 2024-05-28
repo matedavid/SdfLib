@@ -588,16 +588,33 @@ public:
             }
 
             for (int i = 0; i < mLightNumber; ++i)
-            { // DOES NOT WORK, PROBLEM WITH REFERENCES
+            {
                 ImGui::Text("Light %d", i);
+
+                glm::vec3 prevPos = mLightPosition[i];
+                glm::vec3 prevColor = mLightColor[i];
+                float prevIntensity = mLightIntensity[i];
+                float prevRadius = mLightRadius[i];
+
                 std::string pos = "Position##" + std::to_string(i + 48);
-                std::string col = "Color##" + std::to_string(i + 48);
-                std::string intens = "Intensity##" + std::to_string(i + 48);
-                std::string radius = "Radius##" + std::to_string(i + 48);
                 ImGui::InputFloat3(pos.c_str(), reinterpret_cast<float *>(&mLightPosition[i]));
+
+                if (prevPos != mLightPosition[i]) mInvalidate = true;
+
+                std::string col = "Color##" + std::to_string(i + 48);
                 ImGui::ColorEdit3(col.c_str(), reinterpret_cast<float *>(&mLightColor[i]));
+
+                if (prevColor != mLightColor[i]) mInvalidate = true;
+
+                std::string intens = "Intensity##" + std::to_string(i + 48);
                 ImGui::InputFloat(intens.c_str(), &mLightIntensity[i]);
+
+                if (prevIntensity != mLightIntensity[i]) mInvalidate = true;
+
+                std::string radius = "Radius##" + std::to_string(i + 48);
                 ImGui::SliderFloat(radius.c_str(), &mLightRadius[i], 0.01f, 1.0f);
+
+                if (prevRadius != mLightRadius[i]) mInvalidate = true;
             }
 
             // Print meterial settings
