@@ -95,8 +95,9 @@ SceneOctree::SceneOctree(const sdflib::Mesh &mesh, RenderConfig config) : mRende
             assert(n->type == OctreeNode::Type::Gray);
 
             ShaderOctreeNode shaderNode{};
-            shaderNode.min = n->center - glm::vec3(n->halfSize);
-            shaderNode.max = n->center + glm::vec3(n->halfSize);
+            shaderNode.depth = n->depth;
+            // shaderNode.min = n->center - glm::vec3(n->halfSize);
+            // shaderNode.max = n->center + glm::vec3(n->halfSize);
             // shaderNode.ref = n;
 
             mShaderOctreeData.push_back(shaderNode);
@@ -278,8 +279,9 @@ uint32_t SceneOctree::generateShaderOctreeData(const OctreeNode* node)
         const auto& child = node->children[i];
 
         ShaderOctreeNode shaderNode{};
-        shaderNode.min = child->center - glm::vec3(child->halfSize);
-        shaderNode.max = child->center + glm::vec3(child->halfSize);
+        shaderNode.depth = child->depth;
+        // shaderNode.min = child->center - glm::vec3(child->halfSize);
+        // shaderNode.max = child->center + glm::vec3(child->halfSize);
         // shaderNode.ref = child.get();
 
         mShaderOctreeData.push_back(shaderNode);

@@ -75,6 +75,9 @@ public:
         mSceneOctreeStartGridSizeLocation = glGetUniformLocation(mRenderProgramId, "sceneOctreeStartGridSize");
         mSceneOctreeStartGridSize = glm::ivec3{sceneOctree.getStartGridSize()};
 
+        mSceneOctreeSizeLocation = glGetUniformLocation(mRenderProgramId, "sceneOctreeSize");
+        mSceneOctreeSize = sceneOctree.getRoot()->halfSize * 2.0f;
+
         // Set octree data
         glGenBuffers(1, &mOctreeSSBO);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, mOctreeSSBO);
@@ -206,6 +209,7 @@ public:
 
         glUniform1i(mSimpleLocation, mSimple);
         glUniform3i(mSceneOctreeStartGridSizeLocation, mSceneOctreeStartGridSize.x, mSceneOctreeStartGridSize.y, mSceneOctreeStartGridSize.z);
+        glUniform1f(mSceneOctreeSizeLocation, mSceneOctreeSize);
 
         //Global Illumination options
         glUniform1i(mUseIndirectLocation, mUseIndirect);
@@ -270,6 +274,9 @@ private:
 
     unsigned int mEpsilonLocation;
     float mEpsilon = 0.0001f;
+
+    unsigned int mSceneOctreeSizeLocation;
+    float mSceneOctreeSize;
 
     // Global Illumination Settings
     unsigned int mUseIndirectLocation;

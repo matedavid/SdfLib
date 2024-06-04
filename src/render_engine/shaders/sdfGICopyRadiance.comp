@@ -15,9 +15,7 @@ struct OctreeNode
     // - bit 31,30:   node type
     // - bit 29-0:    children idx
     uint data;
-
-    vec3 bboxMin;
-    vec3 bboxMax;
+    uint depth;
 
     vec4 color;
     // roughness, metallic, -, -

@@ -442,9 +442,7 @@ struct OctreeNode
     // - bit 31,30:   node type
     // - bit 29-0:    children idx
     uint data;
-
-    vec3 bboxMin;
-    vec3 bboxMax;
+    uint depth;
 
     vec4 color;
     // roughness, metallic, -, -
@@ -463,6 +461,7 @@ layout(std140, binding = 4) buffer SceneOctree
     OctreeNode sceneData[];
 };
 
+uniform float sceneOctreeSize;
 uniform ivec3 sceneOctreeStartGridSize;
 
 #define NODE_GREY  0
@@ -562,8 +561,11 @@ vec4 sampleCurrentRadiance(Material mat, vec3 gridPos, vec3 N)
 
     OctreeNode node = sceneData[mat.idx];
 
-    vec3 center = (node.bboxMin + node.bboxMax) * 0.5;
-    float size = (node.bboxMax - node.bboxMin).x;
+    // vec3 center = (node.bboxMin + node.bboxMax) * 0.5;
+    // float size = (node.bboxMax - node.bboxMin).x;
+
+    float size = sceneOctreeSize / pow(2, node.depth);
+    vec3 center = (fragInverseWorldToStartGridMatrix * vec4(gridPos, 1.0)).xyz;
 
     uint orientationIdx = getRadianceClosestOrientation(N);
 

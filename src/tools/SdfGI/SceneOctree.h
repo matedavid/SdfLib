@@ -42,11 +42,9 @@ struct ShaderOctreeNode
     // 32 bits
     // - bit 31,30: node type
     // - bit 29-0:  children idx
-    uint32_t data = 0; float _padding1[3];
-
-    // Bbox
-    glm::vec3 min; float _padding2;
-    glm::vec3 max; float _padding3;
+    uint32_t data = 0; 
+    uint32_t depth = 0;
+    float _padding1[2];
 
     glm::vec4 color{};
     // roughness, metallic, -, -
