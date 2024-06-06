@@ -871,7 +871,8 @@ vec3 name(vec3 pos, vec3 N, vec3 V, int depth, uint seed)                       
         sceneData[mat.idx].invalidWriteRadiance[orientationIdx]                    \
             = vec4(newRadiance, totalSamples);                                     \
                                                                                    \
-        indirectLight = mix(currentRadiance.rgb, newRadiance, totalSamples / currentRadiance.w);                                               \
+        float perc = totalSamples / currentRadiance.w;                             \
+        indirectLight = mix(currentRadiance.rgb, newRadiance, perc);               \
     }                                                                              \
     else if (depth == maxDepth)                                                    \
     {                                                                              \
