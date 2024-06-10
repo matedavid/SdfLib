@@ -191,6 +191,17 @@ if(SDFLIB_BUILD_APPS)
     target_include_directories(SdfGIOctreeViewer PRIVATE src/)
     add_dependencies(SdfGIOctreeViewer copyShaders)
 
+    add_executable(SdfGIOctreeStudy
+        src/tools/SdfGI/OctreeStudy.cpp
+        src/tools/SdfGI/SceneOctree.cpp
+
+        ${RENDER_ENGINE_SOURCE_FILES} ${RENDER_ENGINE_HEADER_FILES}
+        ${RENDER_ENGINE_SHADERS_SOURCE_FILES} ${RENDER_ENGINE_SHADERS_HEADER_FILES}
+    )
+    target_link_libraries(SdfGIOctreeStudy PUBLIC ${PROJECT_NAME} glfw imgui imguizmo glad)
+    target_include_directories(SdfGIOctreeStudy PRIVATE src/)
+    add_dependencies(SdfGIOctreeStudy copyShaders)
+
     add_executable(SdfExporter src/tools/SdfExporter/main.cpp)
     target_link_libraries(SdfExporter PUBLIC ${PROJECT_NAME})
 
