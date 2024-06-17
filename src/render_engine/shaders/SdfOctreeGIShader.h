@@ -53,6 +53,8 @@ public:
         mFrameIndexLocation = glGetUniformLocation(mRenderProgramId, "frameIndex");
         mSceneChangedIndexLocation = glGetUniformLocation(mRenderProgramId, "sceneChangedIndex");
 
+        mNeighborSamplingLocation = glGetUniformLocation(mRenderProgramId, "neighborSampling");
+
         //Options
         mUseSoftShadowsLocation = glGetUniformLocation(mRenderProgramId, "useSoftShadows");
         mMaxShadowIterationsLocation = glGetUniformLocation(mRenderProgramId, "maxShadowIterations");
@@ -128,6 +130,11 @@ public:
     void setSdfOffset(float sdfOffset)
     {
         mSdfOffset = sdfOffset;
+    }
+
+    void setNeighborSampling(bool neighborSampling) 
+    {
+        mNeigborSampling = neighborSampling;
     }
 
     void setFrameIndex(int index)
@@ -221,6 +228,8 @@ public:
         glUniform3f(mSkyboxColorLocation, mSkyboxColor.r, mSkyboxColor.g, mSkyboxColor.b);
         glUniform1f(mSdfOffsetLocation, mSdfOffset);
 
+        glUniform1i(mNeighborSamplingLocation, mNeigborSampling);
+
         glUniform1i(mFrameIndexLocation, mFrameIndex);
         glUniform1i(mSceneChangedIndexLocation, mSceneChangedIndex);
 
@@ -311,6 +320,9 @@ private:
 
     unsigned int mCubemapSkyboxLocation;
     std::shared_ptr<Cubemap> mCubemapSkybox;
+
+    unsigned int mNeighborSamplingLocation;
+    bool mNeigborSampling = true;
 
     //Options
     unsigned int mMaxShadowIterationsLocation;

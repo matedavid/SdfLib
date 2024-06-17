@@ -335,6 +335,7 @@ public:
         mOctreeGIShader->setMaxRaycastIterations(mMaxRaycastIterations);
         mOctreeGIShader->setUseDirectSphereSampling(mUseDirectSphereSampling);
         mOctreeGIShader->setSdfOffset(mSdfOffset);
+        mOctreeGIShader->setNeighborSampling(mNeighborSampling);
 
         mOctreeGIShader->setFrameIndex(mAccumulationFrame);
         mOctreeGIShader->setSceneUpdateFrameIndex(mSceneChangedFrame);
@@ -524,6 +525,8 @@ public:
             ImGui::InputInt("Max Raycast Iterations", &mMaxRaycastIterations);
             ImGui::Checkbox("Use Direct Sphere Sampling", &mUseDirectSphereSampling);
             ImGui::InputFloat("SDF Offset", &mSdfOffset);
+
+            ImGui::Checkbox("Neighbor Sampling", &mNeighborSampling);
 
             ImGui::Text("Present options");
             ImGui::InputFloat("Tonemapping Constant", &mTonemappingConstant);
@@ -779,6 +782,7 @@ private:
     int mMaxRaycastIterations = 50;
     bool mUseDirectSphereSampling = false;
     float mSdfOffset = 0.0f;
+    bool mNeighborSampling = true;
 
     // Denoise options
     float mDenoiseSigma = 5.0;
