@@ -330,6 +330,7 @@ public:
         mOctreeGIShader->setMaxShadowIterations(mMaxShadowIterations);
 
         mOctreeGIShader->setUseIndirect(mUseIndirect);
+        mOctreeGIShader->setUseAmbient(mUseAmbient);
         mOctreeGIShader->setNumSamples(mNumSamples);
         mOctreeGIShader->setMaxDepth(mMaxDepth);
         mOctreeGIShader->setMaxRaycastIterations(mMaxRaycastIterations);
@@ -510,6 +511,7 @@ public:
 
             ImGui::Text("Global Illumination Settings");
             ImGui::Checkbox("Use Indirect", &mUseIndirect);
+            ImGui::Checkbox("Use Ambient", &mUseAmbient);
             ImGui::Checkbox("Use Denoising", &mUseDenoising);
             ImGui::Checkbox("Accumulate", &mAccumulate);
             ImGui::Text("Current frame: %d", mAccumulationFrame);
@@ -775,6 +777,7 @@ private:
 
     // Global Illumination Settings
     bool mUseIndirect = false;
+    bool mUseAmbient = false;
     bool mUseDenoising = false;
     bool mAccumulate = true;
     int mNumSamples = 2;

@@ -23,6 +23,7 @@ uniform float epsilon;
 
 // GI Options
 uniform bool useIndirect;
+uniform bool useAmbient;
 uniform int numSamples;
 uniform int maxDepth;
 uniform int maxRaycastIterations;
@@ -699,6 +700,21 @@ bool raycast(vec3 startPos, vec3 dir, out vec3 resultPos)
     return lastDistance <= 1e-5;
 }
 
+float getAO(vec3 pos, vec3 n)
+{
+    float occ = 0.0;
+    float decay = 1.0;
+    for(int i=0; i < MAX_AO_ITERATIONS; i++)
+    {
+        float h = 0.002 + 0.1 * float(i)/8.0;
+        float d = map(pos + n * h, sdfOffset);
+        occ += max(h-d, 0.0);
+        decay *= 0.8;
+    }
+
+    return min(1.0 - 1.5 * occ, 1.0);
+}
+
 vec3 getColor(vec3 pos, vec3 N, vec3 V)
 {
     Material mat = getSceneOctreeColor(pos);
@@ -740,6 +756,12 @@ vec3 getColor(vec3 pos, vec3 N, vec3 V)
         // Add to outgoing radiance Lo
         float NdotL = max(dot(N, L), 0.0);                
         Lo += (kD + specular) * radiance * NdotL;
+    }
+
+    if (useAmbient) 
+    {
+        vec3 ambientColor = vec3(0.5) * mat.albedo * getAO(pos, N);
+        Lo = ambientColor + Lo;
     }
 
     return Lo;

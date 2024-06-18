@@ -41,6 +41,7 @@ public:
 
         //Global Illumination Settings
         mUseIndirectLocation = glGetUniformLocation(mRenderProgramId, "useIndirect");
+        mUseAmbientLocation = glGetUniformLocation(mRenderProgramId, "useAmbient");
         mNumSamplesLocation = glGetUniformLocation(mRenderProgramId, "numSamples");
         mMaxDepthLocation = glGetUniformLocation(mRenderProgramId, "maxDepth");
         mMaxRaycastIterationsLocation = glGetUniformLocation(mRenderProgramId, "maxRaycastIterations");
@@ -105,6 +106,11 @@ public:
     void setUseIndirect(bool useIndirect)
     {
         mUseIndirect = useIndirect;
+    }
+
+    void setUseAmbient(bool useAmbient)
+    {
+        mUseAmbient = useAmbient;
     }
 
     void setNumSamples(int numSamples)
@@ -220,6 +226,7 @@ public:
 
         //Global Illumination options
         glUniform1i(mUseIndirectLocation, mUseIndirect);
+        glUniform1i(mUseAmbientLocation, mUseAmbient);
         glUniform1i(mNumSamplesLocation, mNumSamples);
         glUniform1i(mMaxDepthLocation, mMaxDepth);
         glUniform1i(mMaxRaycastIterationsLocation, mMaxRaycastIterations);
@@ -290,6 +297,9 @@ private:
     // Global Illumination Settings
     unsigned int mUseIndirectLocation;
     bool mUseIndirect = false;
+
+    unsigned int mUseAmbientLocation;
+    bool mUseAmbient = false;
 
     unsigned int mNumSamplesLocation;
     int mNumSamples;
